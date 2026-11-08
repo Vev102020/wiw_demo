@@ -1,0 +1,83 @@
+services:
+  # Локальное S3-хранилище (Silo)
+  wiw-silo:
+    image: pgsty/silo:latest
+    container_name: wiw_silo_s3
+    command: server /data
+    ports:
+      - "9000:9000"       # Порт для API (Ktor будет загружать файлы сюда)
+      - "9001:9001"       # Порт для веб-панели (вы сможете зайти через браузер)
+    environment:
+       # клиентский
+#      - AWS_ACCESS_KEY_ID=${SILO_ROOT_USER}
+#      - AWS_SECRET_ACCESS_KEY=${SILO_ROOT_PASSWORD}
+      # северный
+      - MINIO_ROOT_USER=${SILO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${SILO_ROOT_PASSWORD}
+    volumes:
+      - ./chat_storage:/data
+    networks:
+      - wiw-network
+    restart: always
+
+  # Сервис оперативного кэша и сессий Redis
+  wiw-redis:
+    image: redis:7-alpine
+    container_name: wiw_redis_cache
+    ports:
+      - "6379:6379"
+    networks:
+      - wiw-network
+    restart: always
+
+  # Сервис вашего Ktor-сервера
+  wiw-chat-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wiw_chat_server
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    depends_on:
+      wiw-silo:
+        condition: service_started
+      wiw-redis:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx1536m -XX:+UseG1GC
+
+      - APP_NAME=${APP_NAME}
+      - SERVER_URL=${SERVER_URL}
+      - REDIS_HOST=${REDIS_HOST_NAME}
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SENDER_EMAIL=${SMTP_SENDER_EMAIL}
+      - SMTP_SENDER_PASSWORD=${SMTP_SENDER_PASSWORD}
+      - CRYPTO_SECRET=${CRYPTO_SECRET}
+
+      - DB_URL=${POSTGRES_URL}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=${SERVER_URL}
+      - JWT_AUDIENCE=${SERVER_URL}/main
+
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+    networks:
+      - wiw-network
+    restart: always
+
+
+networks:
+  wiw-network:
+    driver: bridge

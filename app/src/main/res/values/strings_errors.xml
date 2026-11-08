@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="err_network_timeout">Server connection timed out. Please check your internet connection.</string>
+    <string name="err_generic_unknown">An unexpected error occurred on the server. Please try again later.</string>
+    <string name="err_server_maintenance">The server is temporarily unavailable due to technical maintenance. Please try again later.</string>
+    <string name="err_auth_too_many_attempts">Too many failed attempts. Access blocked. Please try again later.</string>
+
+    <!-- Auth -->
+    <string name="err_auth_email_too_long">The entered email is too long. Maximum 50 characters.</string>
+    <string name="err_auth_invalid_code">Invalid code. Please try again.</string>
+    <string name="err_auth_code_expired">The verification code has expired. Please request a new one.</string>
+
+    <string name="err_auth_invalid_credentials">Invalid email or password.</string>
+    <string name="err_auth_empty_email">Email is required.</string>
+    <string name="err_auth_empty_password">Password cannot be empty.</string>
+    <string name="err_auth_invalid_email_format">Please enter a valid email address.</string>
+    <string name="err_auth_pass_length">The password length must be between 8 and 25 characters.</string>
+    <string name="err_auth_pass_digit">The password must contain at least one digit.</string>
+    <string name="err_auth_pass_upper">The password must contain at least one uppercase letter.</string>
+    <string name="err_auth_pass_lower">The password must contain at least one lowercase letter.</string>
+    <string name="err_auth_passwords_dont_match">Passwords do not match. Please re-enter.</string>
+</resources>

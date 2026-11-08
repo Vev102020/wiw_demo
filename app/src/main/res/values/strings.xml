@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">WIW Chat</string>
+
+    <!-- Policy -->
+    <string name="cm_policy_agree">I agree to the </string>
+    <string name="cm_policy_link">privacy policy</string>
+
+    <string name="cm_loading">Loading&#8230;</string>
+
+</resources>

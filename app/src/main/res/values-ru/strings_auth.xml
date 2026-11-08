@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Welcome Screen -->
+    <string name="welcome_title">Добро пожаловать!</string>
+    <string name="welcome_text">Начните переписку за пару секунд — войдите или зарегистрируйтесь.</string>
+    <string name="welcome_login_btn">Вход</string>
+    <string name="welcome_reg_btn">Регистрация</string>
+    <!-- Auth Screen -->
+    <string name="auth_name_label">Имя</string>
+    <string name="auth_email_label">Email</string>
+    <string name="auth_password_label">Пароль</string>
+    <string name="auth_password_label_repeat">Повтор пароля</string>
+    <string name="auth_forgot_pass_btn">Забыли пароль?</string>
+    <string name="auth_show_hide_pass_btn">Показать/скрыть пароль</string>
+    <!-- Login-->
+    <string name="auth_login_title">Вход</string>
+    <string name="auth_login_btn">Войти</string>
+    <string name="auth_login_no_account_text">Нет аккаунта?</string>
+    <string name="auth_login_link_register">Зарегистрироваться</string>
+    <!-- Register -->
+    <string name="auth_reg_title">Регистрация</string>
+    <string name="auth_reg_btn">Зарегистрироваться</string>
+    <string name="auth_reg_yes_account_text">Есть аккаунт?</string>
+    <string name="auth_reg_link_login">Войти</string>
+    <!-- Verifcation  -->
+    <string name="auth_verify_title">Подтвердите почту</string>
+    <string name="auth_verify_subtitle">Введите верификационный код, отправленный на почту</string>
+    <string name="auth_verify_expiry">Не пришел код? Повторная отправка через <b>%1$s</b> сек</string>
+    <string name="auth_verify_resend_btn">Отправить код повторно</string>
+    <string name="auth_verify_continue_btn">Продолжить</string>
+    <string name="auth_code_label">Код подтверждения</string>
+    <!-- Forgot password  -->
+    <string name="auth_forgot_title">Восстановление пароля</string>
+    <string name="auth_forgot_description">Введите ваш email, и мы отправим временный код для восстановления доступа.</string>
+    <string name="auth_forgot_send_btn">Отправить код</string>
+    <string name="auth_forgot_remember_pass">Вспомнили пароль?</string>
+    <string name="auth_forgot_link_login">Войти</string>
+    <!-- Reset password -->
+    <string name="auth_reset_title">Новый пароль</string>
+    <string name="auth_reset_description">Код подтверждения отправлен на указанный email. Придумайте сложный пароль для защиты аккаунта.</string>
+    <string name="auth_new_password_label">Придумайте новый пароль</string>
+    <string name="auth_reset_btn">Сбросить пароль</string>
+</resources>

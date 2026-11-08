@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_title">Welcome!</string>
+    <string name="welcome_text">Start chatting in a few seconds — log in or sign up.</string>
+    <string name="welcome_login_btn">Sign In</string>
+    <string name="welcome_reg_btn">Sign Up</string>
+    <!-- Auth Screen -->
+    <string name="auth_name_label">Name</string>
+    <string name="auth_email_label">Email</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_password_label_repeat">Repeat password</string>
+    <string name="auth_forgot_pass_btn">Forgot password?</string>
+    <string name="auth_show_hide_pass_btn">Show/Hide password</string>
+    <!-- Login-->
+    <string name="auth_login_title">Sign</string>
+    <string name="auth_login_btn">Log In</string>
+    <string name="auth_login_no_account_text">Don’t have an account?</string>
+    <string name="auth_login_link_register">Sign up</string>
+    <!-- Register -->
+    <string name="auth_reg_title">Create Account</string>
+    <string name="auth_reg_btn">Sign Up</string>
+    <string name="auth_reg_yes_account_text">Have an account?</string>
+    <string name="auth_reg_link_login">Log In</string>
+    <!-- Verification -->
+    <string name="auth_verify_title">Confirm your email</string>
+    <string name="auth_verify_subtitle">Please enter the verification code sent to</string>
+    <string name="auth_verify_expiry">Didn’t get the code? Resend in <b>%1$s</b> sec</string>
+    <string name="auth_verify_resend_btn">Resend code</string>
+    <string name="auth_verify_continue_btn">Continue</string>
+    <string name="auth_code_label">Verification code</string>
+    <!-- Forgot password  -->
+    <string name="auth_forgot_title">Reset Password</string>
+    <string name="auth_forgot_description">Enter your email address, and we will send you a temporary code to restore access.</string>
+    <string name="auth_forgot_send_btn">Send Code</string>
+    <string name="auth_forgot_remember_pass">Remember your password?</string>
+    <string name="auth_forgot_link_login">Log In</string>
+    <!-- Reset password -->
+    <string name="auth_reset_title">New Password</string>
+    <string name="auth_reset_description">A verification code has been sent to the specified email. Create a strong password to protect your account.</string>
+    <string name="auth_new_password_label">Create a new password</string>
+    <string name="auth_reset_btn">Reset Password</string>
+</resources>

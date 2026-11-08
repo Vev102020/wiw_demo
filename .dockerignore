@@ -1,0 +1,12 @@
+.gradle
+.idea
+out
+*.iml
+chat_storage
+chat_media
+.env
+
+# Игнорируем промежуточные папки сборки, НО разрешаем доступ к финальным JAR-файлам
+**/build/classes/
+**/build/tmp/
+**/build/resources/

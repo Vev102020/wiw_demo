@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="err_network_timeout">Превышено время ожидания ответа от сервера. Проверьте интернет-соединение.</string>
+    <string name="err_generic_unknown">Произошла непредвиденная ошибка на сервере. Пожалуйста, повторите попытку позже.</string>
+    <string name="err_server_maintenance">Сервер временно недоступен. Мы уже проводим технические работы, пожалуйста, попробуйте позже.</string>
+    <string name="err_auth_too_many_attempts">Слишком много неудачных попыток. Доступ заблокирован. Попробуйте позже.</string>
+
+    <!-- Auth -->
+    <string name="err_auth_email_too_long">Введенный email слишком длинный. Максимум 50 символа.</string>
+    <string name="err_auth_invalid_code">Неверный код. Попробуйте еще раз.</string>
+    <string name="err_auth_code_expired">Срок действия кода истек. Запросите новый.</string>
+
+    <string name="err_auth_invalid_credentials">Неверный email или пароль.</string>
+    <string name="err_auth_empty_email">Email обязателен для заполнения.</string>
+    <string name="err_auth_empty_password">Пароль не может быть пустым.</string>
+    <string name="err_auth_invalid_email_format">Пожалуйста, введите корректный email адрес.</string>
+    <string name="err_auth_pass_length">Длина пароля должна быть от 8 до 25 символов.</string>
+    <string name="err_auth_pass_digit">Пароль должен содержать хотя бы одну цифру.</string>
+    <string name="err_auth_pass_upper">Пароль должен содержать хотя бы одну заглавную букву.</string>
+    <string name="err_auth_pass_lower">Пароль должен содержать хотя бы одну строчную букву.</string>
+
+    <string name="err_auth_passwords_dont_match">Пароли не совпадают. Повторите ввод.</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WIW Chat</string>
+    <!-- Policy -->
+    <string name="cm_policy_agree">Я согласен с </string>
+    <string name="cm_policy_link">политикой конфиденциальности</string>
+
+    <string name="cm_loading">Загрузка&#8230;</string>
+
+
+</resources>

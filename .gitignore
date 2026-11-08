@@ -1,0 +1,21 @@
+# Файлы окружения с паролями и секретами
+.env
+*.env
+chat_storage/
+
+ Кэш и настройки Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+.gradle/
+build/
+**/build/
+local.properties
+
+# Логи и временные файлы Docker
+.docker/
+logs/
+*.log
+
+# Операционная система
+Thumbs.db
+.DS_Store
