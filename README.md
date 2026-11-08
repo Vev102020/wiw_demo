@@ -1,41 +1,16 @@
-# wiw_chat
+<img width="1299" height="984" alt="image" src="https://github.com/user-attachments/assets/0bd3fc8c-1fb4-4f7b-95ba-fdfe620a1018" />
 
-This project was created using the [Ktor Project Generator](https://start.ktor.io).
+<img width="1272" height="756" alt="image" src="https://github.com/user-attachments/assets/b03ffd85-9096-48d8-910f-9944a3dfd074" />
 
-Here are some useful links to get you started:
- * [Ktor Documentation](https://ktor.io/docs/home.html)
- * [Ktor GitHub page](https://github.com/ktorio/ktor)
- * [Ktor Slack chat](https://app.slack.com/client/T09229ZC6/C0A974TJ9). [Request an invite](https://surveys.jetbrains.com/s3/kotlin-slack-sign-up).
+<img width="1528" height="1201" alt="image" src="https://github.com/user-attachments/assets/6146f5af-6e3f-447c-8c2b-2b06b5e46988" />
 
+<img width="1135" height="1080" alt="image" src="https://github.com/user-attachments/assets/a5b5c37b-614c-4acd-a8cd-1d1c91adcba0" />
 
-## Features
-Here's a list of features included in this project:
-
-| Name | Description |
-|------|-------------|
-| [Authentication](https://start.ktor.io/p/io.ktor/server-auth) | Provides extension point for handling the Authorization header |
-| [Content Negotiation](https://start.ktor.io/p/io.ktor/server-content-negotiation) | Provides automatic content conversion according to Content-Type and Accept headers |
-| [kotlinx.serialization](https://start.ktor.io/p/io.ktor/server-kotlinx-serialization) | Handles JSON serialization using kotlinx.serialization library |
-| [Rate Limiting](https://start.ktor.io/p/io.github.flaxoos/server-rate-limiting) | Manage request rate limiting as you see fit |
-| [Call Logging](https://start.ktor.io/p/io.ktor/server-call-logging) | Logs client requests |
-| [WebSockets](https://start.ktor.io/p/io.ktor/server-websockets) | Adds WebSocket protocol support for bidirectional client connections |
-| [Authentication JWT](https://start.ktor.io/p/io.ktor/server-auth-jwt) | Handles JSON Web Token (JWT) bearer authentication scheme |
-| [CORS](https://start.ktor.io/p/io.ktor/server-cors) | Enables Cross-Origin Resource Sharing (CORS) |
-| [PostgreSQL](https://start.ktor.io/p/org.jetbrains/server-postgres) | Adds Postgres database support |
+<img width="480" height="854" alt="image" src="https://github.com/user-attachments/assets/ee9052ee-2b88-442a-9547-304b79de6071" />
+<img width="355" height="775" alt="image" src="https://github.com/user-attachments/assets/f7f78504-70f9-4384-978e-d5f2c47d259d" />
+<img width="350" height="814" alt="image" src="https://github.com/user-attachments/assets/d28edcb3-209e-4211-98cf-6aac047a2971" />
+<img width="362" height="743" alt="image" src="https://github.com/user-attachments/assets/b5d7232e-6874-4e93-8b0c-8343f2ed991d" />
+<img width="342" height="752" alt="image" src="https://github.com/user-attachments/assets/edf1b39d-284d-485e-9d76-4ec0d0dd7775" />
+<img width="1530" height="972" alt="image" src="https://github.com/user-attachments/assets/7f16511c-905f-4f88-a854-d793e7bd90c2" />
 
 
-## Building & Running
-To build or run the project, use one of the following tasks:
-
-
-| Task | Description |
-|------|-------------|
-| `./gradlew test`    | Run the tests     |
-| `./gradlew build`   | Build the project |
-| `./gradlew run`     | Run the server    |
-
-If the server starts successfully, you'll see the following output:
-```
-2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
-2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
-```
