@@ -1,4 +1,3 @@
-# Сразу берем легковесный рантайм, никакой сборки внутри!
 FROM eclipse-temurin:21-jre-alpine
 EXPOSE 8080
 WORKDIR /app
