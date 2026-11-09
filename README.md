@@ -1,35 +1,33 @@
 <b>Технический стек разработки:</b>
-<p></p>
-Android / Mobile:
+
+Android / Mobile: \
 Kotlin, Jetpack Compose, KMP (shared/app/server), Hilt + Koin, Room, DataStore, KSP, MVVM, Clean Architecture, Serialization, Flow, Coroutines. Настройка динамичной смены языка и темы приложения. 
 
 
-Backend & DB:
+Backend & DB: \
 Ktor, PostgreSQL, Redis (управление сессиями/токенами), JWT, ИБ уязвимости, Вынос ошибок для упрощения тестирования.
 
-
-DevOps & Инструменты:
+DevOps & Инструменты: \
 Docker(запуск сервера), Postman (тестирование API), GitHub, GitLab.
 
 ---------------------------------------------------------------------------
 <b>Тестирование в Postman</b>
-<p></p>
+
 <img width="1299" height="984" alt="image" src="https://github.com/user-attachments/assets/0bd3fc8c-1fb4-4f7b-95ba-fdfe620a1018" />
 
 <img width="1272" height="756" alt="image" src="https://github.com/user-attachments/assets/b03ffd85-9096-48d8-910f-9944a3dfd074" />
 
-<p></p>
+<br><br><br>
 <b>Демонстрация из pgAdmin4 (PostgreSql 18)</b>
 <p></p>
 <img width="1528" height="1201" alt="image" src="https://github.com/user-attachments/assets/6146f5af-6e3f-447c-8c2b-2b06b5e46988" />
 
-<p></p>
+<br><br><br>
 <b>Docker</b>
 <p></p>
 <img width="1530" height="972" alt="image" src="https://github.com/user-attachments/assets/7f16511c-905f-4f88-a854-d793e7bd90c2" />
 
-
-<p></p>
+<br><br><br>
 <b>Демонстрация экрана приложения с динамической сменой языка через настройки.</b>
 <p></p>
 <img width="1135" height="1080" alt="image" src="https://github.com/user-attachments/assets/a5b5c37b-614c-4acd-a8cd-1d1c91adcba0" />
