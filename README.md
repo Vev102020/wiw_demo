@@ -1,15 +1,14 @@
 <b>Технический стек разработки:</b>
 <p></p>
 Android / Mobile:
-<p></p>
 Kotlin, Jetpack Compose, KMP (shared/app/server), Hilt + Koin, Room, DataStore, KSP, MVVM, Clean Architecture, Serialization, Flow, Coroutines. Настройка динамичной смены языка и темы приложения. 
 
-Backend & DB: 
-<p></p>
+
+Backend & DB:
 Ktor, PostgreSQL, Redis (управление сессиями/токенами), JWT, ИБ уязвимости, Вынос ошибок для упрощения тестирования.
 
-DevOps & Инструменты: 
-<p></p>
+
+DevOps & Инструменты:
 Docker(запуск сервера), Postman (тестирование API), GitHub, GitLab.
 
 ---------------------------------------------------------------------------
