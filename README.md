@@ -16,18 +16,20 @@ Docker(запуск сервера), Postman (тестирование API), Git
 
 <img width="1272" height="756" alt="image" src="https://github.com/user-attachments/assets/b03ffd85-9096-48d8-910f-9944a3dfd074" />
 
+<p></p>
+<b>Демонстрация из pgAdmin4 (PostgreSql 18)</b>
+<p></p>
 <img width="1528" height="1201" alt="image" src="https://github.com/user-attachments/assets/6146f5af-6e3f-447c-8c2b-2b06b5e46988" />
 
-<b>Демонстрация из pgAdmin4 (PostgreSql 18)</b>
+<p></p>
+<b>Docker</b>
 <p></p>
 <img width="1135" height="1080" alt="image" src="https://github.com/user-attachments/assets/a5b5c37b-614c-4acd-a8cd-1d1c91adcba0" />
 
-<b>Docker</b>
 <p></p>
-<img width="1530" height="972" alt="image" src="https://github.com/user-attachments/assets/7f16511c-905f-4f88-a854-d793e7bd90c2" />
-
 <b>Демонстрация экрана приложения с динамической сменой языка через настройки.</b>
 <p></p>
+<img width="1530" height="972" alt="image" src="https://github.com/user-attachments/assets/7f16511c-905f-4f88-a854-d793e7bd90c2" />
 <img width="480" height="854" alt="image" src="https://github.com/user-attachments/assets/ee9052ee-2b88-442a-9547-304b79de6071" />
 <img width="355" height="775" alt="image" src="https://github.com/user-attachments/assets/f7f78504-70f9-4384-978e-d5f2c47d259d" />
 <img width="362" height="743" alt="image" src="https://github.com/user-attachments/assets/b5d7232e-6874-4e93-8b0c-8343f2ed991d" />
