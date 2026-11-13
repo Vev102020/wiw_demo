@@ -3,7 +3,7 @@ package com.wiwchat.features.auth.presentation.state
 import com.wiwchat.app.R
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
-import com.wiwchat.shared.common.data.errors.AuthErrorCode
+import com.wiwchat.shared.common.domain.errors.AuthErrorCode
 import com.wiwchat.shared.features.auth.domain.constants.AuthConstants
 import com.wiwchat.shared.features.auth.domain.validator.*
 
@@ -38,12 +38,30 @@ class EmailFieldState : InputFieldState {
     }
 
     override fun validate(showEmptyError: Boolean): Boolean {
+//        val error = AuthValidator.validateEmail(text.value)
+//        errorResId.value = when (error) {
+//            AuthErrorCode.AUTH_EMPTY_EMAIL -> if (showEmptyError) R.string.err_auth_empty_email else null
+//            AuthErrorCode.AUTH_INVALID_EMAIL_FORMAT -> R.string.err_auth_invalid_email_format
+//            else -> null
+//        }
+//        return error == null
+
         val error = AuthValidator.validateEmail(text.value)
-        errorResId.value = when (error) {
-            AuthErrorCode.AUTH_EMPTY_EMAIL -> if (showEmptyError) R.string.err_auth_empty_email else null
-            AuthErrorCode.AUTH_INVALID_EMAIL_FORMAT -> R.string.err_auth_invalid_email_format
-            else -> null
+
+        // Меняем ошибку на экране только если нужно ее показать,
+        // Либо если поле стало полностью валидным (ошибка ушла)
+        if (showEmptyError || error == null) {
+            errorResId.value = when (error) {
+                AuthErrorCode.AUTH_EMPTY_EMAIL -> R.string.err_auth_empty_email
+                AuthErrorCode.AUTH_INVALID_EMAIL_FORMAT -> R.string.err_auth_invalid_email_format
+                else -> null
+            }
+        } else {
+            // Если во время ввода формат стал неверным, но мы не хотим показывать ошибку,
+            // мы сохраняем старую ошибку (если она была) или оставляем null.
+            // Но при этом функция ВСЁ РАВНО вернет false наружу.
         }
+
         return error == null
     }
 }

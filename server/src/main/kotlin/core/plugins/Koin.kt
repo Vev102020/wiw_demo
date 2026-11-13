@@ -1,11 +1,7 @@
 package core.plugins
 
 import com.wiwchat.shared.common.di.sharedModules
-import core.util.CryptoUtils
-import core.util.RedisManager
-import core.util.S3Manager
-import di.infrastructureModule
-import di.serverBackendModule
+import di.*
 import io.ktor.server.application.*
 import io.ktor.server.config.ApplicationConfig
 import org.koin.dsl.module

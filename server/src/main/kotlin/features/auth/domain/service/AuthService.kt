@@ -53,7 +53,8 @@ class AuthService(
         val email: String,
         val code: String,
         val attempts: Int,
-        val passwordHash: String? = null
+        val passwordHash: String? = null,
+        val verified: Boolean = false
     )
 
     /**
@@ -121,7 +122,10 @@ class AuthService(
         )
     }
 
+
+
     /**
+     * Users
      * Пред-регистрация. Валидирует данные и выпускает шифрованный JWT токен.
      */
     suspend fun register(request: RegisterRequest): RegisterResponse {
@@ -190,39 +194,17 @@ class AuthService(
      * Верификация OTP. Расшифровывает токен и совершает ОДНУ запись в БД
      */
 
-    suspend fun verifyOtp(request: VerifyEmailRequest, userAgent: String): LoginResponse {
+    suspend fun verifyOtp(request: VerifyOtpRequest, userAgent: String): LoginResponse {
         val sessionId = request.registrationSessionId
 
-        val sessionState = try {
-            getAndValidateSession(sessionId, request.email, isResetPassword = false)
-        } catch (e: Exception) {
-            throw InvalidOtpCodeException()
-        }
+        val sessionState = verifySessionOtpCode(
+            sessionId = sessionId,
+            requestEmail = request.email,
+            requestCode = request.code,
+            isResetPassword = false
+        )
 
         val passwordHash = sessionState.passwordHash ?: throw InvalidTokenException()
-
-        // Если клиент уже ошибся 3 раза — полностью уничтожаем сессию в Redis
-        if (sessionState.attempts >= 3) {
-            RedisManager.deleteRegistrationSession(sessionId)
-            throw TooManyOtpAttemptsException()
-        }
-
-        if (sessionState.code != request.code) {
-            val nextAttempts = sessionState.attempts + 1
-            val currentTtl = RedisManager.getRegistrationTtl(sessionId)
-
-            val updatedSession = buildJsonObject {
-                put("email", sessionState.email)
-                put("passwordHash", passwordHash)
-                put("code", sessionState.code)
-                put("attempts", nextAttempts)
-            }.toString()
-
-            if (currentTtl > 0) {
-                RedisManager.saveRegistrationSession(sessionId, updatedSession, currentTtl)
-            }
-            throw InvalidOtpCodeException()
-        }
 
         // Защита от race condition (проверяем, не успели ли занять email за эти 5 минут)
         val userExists = newSuspendedTransaction(Dispatchers.IO)  {
@@ -319,7 +301,7 @@ class AuthService(
     /**
      * Верификация повторная отправка
      */
-    suspend fun resendRegistrationOtp(request: ResendCodeRequest): RegisterResponse {
+    suspend fun resendRegistrationOtp(request: ResendOtpRequest): RegisterResponse {
         val sessionId = request.registrationSessionId
 
         // Извлекаем текущую сессию из Redis
@@ -454,6 +436,30 @@ class AuthService(
     }
 
     /**
+     * OTP при смене пароля
+     */
+    suspend fun verifyResetOtp(request: VerifyResetOtpRequest): ForgotPasswordResponse {
+        val sessionId = request.resetToken
+        val sessionState = verifySessionOtpCode(
+            sessionId = sessionId,
+            requestEmail = request.email,
+            requestCode = request.code,
+            isResetPassword = true
+        )
+
+        val verifiedSession = buildJsonObject {
+            put("email", sessionState.email)
+            put("code", sessionState.code)
+            put("attempts", sessionState.attempts)
+            put("verified", true)
+        }.toString()
+
+        RedisManager.saveRegistrationSession(sessionId, verifiedSession, ttlSeconds = 300L)
+
+        return ForgotPasswordResponse(resetToken = sessionId)
+    }
+
+    /**
      * Сброс и сохранение нового пароля
      */
     suspend fun resetPassword(request: ResetPasswordRequest) {
@@ -462,29 +468,11 @@ class AuthService(
         // Используем общую приватную функцию валидации
         val sessionState = getAndValidateSession(sessionId, request.email, isResetPassword = true)
 
-        // Защита от брутфорса кода восстановления
-        if (sessionState.attempts >= 3) {
-            RedisManager.deleteRegistrationSession(sessionId)
-            throw TooManyOtpAttemptsException()
+        // Убеждаемся, что пользователь прошел шаг проверки OTP-кода
+        if (!sessionState.verified) {
+            throw InvalidResetTokenException()
         }
 
-        if (sessionState.code != request.code) {
-            val nextAttempts = sessionState.attempts + 1
-            val currentTtl = RedisManager.getRegistrationTtl(sessionId)
-
-            val updatedSession = buildJsonObject {
-                put("email", sessionState.email)
-                put("code", sessionState.code)
-                put("attempts", nextAttempts)
-            }.toString()
-
-            if (currentTtl > 0) {
-                RedisManager.saveRegistrationSession(sessionId, updatedSession, currentTtl)
-            }
-            throw InvalidResetCodeException()
-        }
-
-        // Хэшируем НОВЫЙ пароль (вычисляется только для подтвержденного юзера, DoS невозможен)
         val newPasswordHash = BCrypt.hashpw(request.newPassword, BCrypt.gensalt(10))
 
         val userIdUUID = newSuspendedTransaction(Dispatchers.IO) {
@@ -495,8 +483,6 @@ class AuthService(
 
             if (userRow != null) {
                 val id = userRow[UsersTable.id]
-
-                // Обновляем пароль по точному UUID индексу
                 UsersTable.update({ UsersTable.id eq id }) {
                     it[this.passwordHash] = newPasswordHash
                 }
@@ -538,7 +524,12 @@ class AuthService(
     /**
      * Смена пароля изнутри настроек авторизованным пользователем
      */
-    suspend fun changePassword(userId: UUID, request: ChangePasswordRequest, userAgent: String): LoginResponse {
+    suspend fun changePassword(
+        userId: UUID,
+        request: ChangePasswordRequest,
+        userAgent: String,
+        currentAccessToken: String?
+    ): LoginResponse {
         // Извлекаем пользователя из БД для проверки старого пароля
         val user: AuthUser = newSuspendedTransaction(Dispatchers.IO) {
             (UsersTable innerJoin UserProfilesTable)
@@ -597,8 +588,7 @@ class AuthService(
             }
         }
 
-        // Выход из аккаунта. Выбиваем все остальные устройства.
-        forceLogoutUser(userIdStr)
+        forceLogoutUser(userIdStr, excludeAccessToken = currentAccessToken)
 
         return response
     }
@@ -785,11 +775,66 @@ class AuthService(
 
         val passwordHash = session["passwordHash"]?.jsonPrimitive?.content
 
+        val verified = session["verified"]?.jsonPrimitive?.booleanOrNull ?: false
+
         // Проверка подмены email. Если не совпал — это попытка подмены данных
         if (emailFromSession != requestEmail.trim().lowercase()) {
             if (isResetPassword) throw InvalidResetTokenException() else throw InvalidTokenException()
         }
 
-        return AuthSessionState(emailFromSession, code, attempts, passwordHash)
+
+        return AuthSessionState(
+            email = emailFromSession,
+            code = code,
+            attempts = attempts,
+            passwordHash = passwordHash,
+            verified = verified
+        )
+    }
+
+    private fun verifySessionOtpCode(
+        sessionId: String,
+        requestEmail: String,
+        requestCode: String,
+        isResetPassword: Boolean
+    ): AuthSessionState {
+        val sessionState = if (isResetPassword) {
+            getAndValidateSession(sessionId, requestEmail, isResetPassword = true)
+        } else {
+            try {
+                getAndValidateSession(sessionId, requestEmail, isResetPassword = false)
+            } catch (e: Exception) {
+                throw InvalidOtpCodeException()
+            }
+        }
+
+        // Защита от брутфорса (максимум 3 попытки)
+        if (sessionState.attempts >= 3) {
+            RedisManager.deleteRegistrationSession(sessionId)
+            throw TooManyOtpAttemptsException()
+        }
+
+        // Сверяем введенный код с кодом из Redis
+        if (sessionState.code != requestCode) {
+            val nextAttempts = sessionState.attempts + 1
+            val currentTtl = RedisManager.getRegistrationTtl(sessionId)
+
+            val updatedSession = buildJsonObject {
+                put("email", sessionState.email)
+                put("code", sessionState.code)
+                put("attempts", nextAttempts)
+                // Сохраняем специфичные поля в зависимости от типа сессии
+                sessionState.passwordHash?.let { put("passwordHash", it) }
+                if (isResetPassword) put("verified", false)
+            }.toString()
+
+            if (currentTtl > 0) {
+                RedisManager.saveRegistrationSession(sessionId, updatedSession, currentTtl)
+            }
+
+            throw if (isResetPassword) InvalidResetCodeException() else InvalidOtpCodeException()
+        }
+
+        return sessionState
     }
 }

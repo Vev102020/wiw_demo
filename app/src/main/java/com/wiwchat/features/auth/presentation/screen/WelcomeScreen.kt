@@ -15,8 +15,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
 import com.wiwchat.app.R
-import com.wiwchat.core.ui.components.PrimaryButton
-import com.wiwchat.core.ui.components.SecondaryButton
+import com.wiwchat.core.ui.components.base.PrimaryButton
+import com.wiwchat.core.ui.components.base.SecondaryButton
 import com.wiwchat.core.ui.theme.AppTheme
 import com.wiwchat.core.ui.theme.appColors
 import com.wiwchat.core.ui.theme.components

@@ -19,31 +19,42 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.*
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiwchat.features.auth.presentation.viewmodel.VerificationViewModel
-import com.wiwchat.core.ui.components.PrimaryButton
+import com.wiwchat.core.ui.components.base.PrimaryButton
 import com.wiwchat.core.ui.theme.AppTheme
 import com.wiwchat.core.ui.theme.appColors
 import com.wiwchat.core.ui.theme.spacing
+import com.wiwchat.core.ui.util.mapAuthErrorToId
 import com.wiwchat.shared.core.util.maskEmail
 import com.wiwchat.shared.features.auth.domain.constants.AuthConstants
 
 @Composable
 fun VerificationRoute(
     viewModel: VerificationViewModel,
+    onNavigateToResetPassword: (email: String, verifiedResetToken: String) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     BackHandler(enabled = true) { onNavigateBack() }
 
+    val otpCodeText by viewModel.otpCodeInput.collectAsStateWithLifecycle()
+    val otpErrorCode by viewModel.otpError.collectAsStateWithLifecycle()
+
+    // Разворачиваем общие состояния экрана
+    val isButtonEnabled by viewModel.isButtonEnabled.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val secondsRemaining by viewModel.secondsRemaining.collectAsStateWithLifecycle()
+
     VerificationScreen(
         maskedEmail = maskEmail(viewModel.email),
-        otpCodeValue = viewModel.otpCodeInput.value,
-        isLoading = viewModel.isLoading.value,
-        errorResId = viewModel.errorStringResId.value,
-        codeLength = AuthConstants.CODE_LENGTH,
-        totalSecondsRemaining = viewModel.secondsRemaining.value,
+        otpCodeValue = otpCodeText,
+        isButtonEnabled = isButtonEnabled,
+        isLoading = isLoading,
+        errorResId = otpErrorCode?.let { mapAuthErrorToId(it) },
+        secondsRemaining = secondsRemaining,
         onOtpCodeChanged = { viewModel.onOtpCodeChanged(it) },
-        onVerifyClick = { viewModel.verifyCodeToServer() },
-        onResendCodeClick = { viewModel.startTimer() },
+        onVerifyClick = { viewModel.verifyOtpToServer(onNavigateToResetPassword) },
+        onResendOtpClick = { viewModel.resendOtpToServer() },
     )
 }
 
@@ -52,12 +63,12 @@ fun VerificationScreen(
     maskedEmail: String,
     otpCodeValue: String,
     onOtpCodeChanged: (String) -> Unit,
+    isButtonEnabled: Boolean,
     isLoading: Boolean,
     errorResId: Int?,
-    codeLength: Int,
-    totalSecondsRemaining: Int,
+    secondsRemaining: Int,
     onVerifyClick: () -> Unit,
-    onResendCodeClick: () -> Unit,
+    onResendOtpClick: () -> Unit,
 ) {
 
     Scaffold { paddingValues ->
@@ -78,7 +89,7 @@ fun VerificationScreen(
                 ),
             )
 
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraLarge))
 
             val prefix = stringResource(id = R.string.auth_verify_subtitle)
 
@@ -107,9 +118,8 @@ fun VerificationScreen(
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraLarge))
 
             VerificationCodeInput(
-                codeLength = codeLength,
                 codeValue = otpCodeValue,
-                isError = errorResId != null,
+                errorResId = errorResId,
                 enabled = !isLoading,
                 onCodeChanged = onOtpCodeChanged
             )
@@ -128,19 +138,17 @@ fun VerificationScreen(
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraLarge))
 
             PrimaryButton(
-                text = stringResource(R.string.auth_verify_continue_btn),
+                modifier = Modifier.fillMaxWidth(),
+                text = if (isLoading) stringResource(R.string.cm_loading) else stringResource(R.string.auth_verify_continue_btn),
                 onClick = onVerifyClick,
-                enabled = otpCodeValue.length == codeLength && !isLoading,
-                modifier = Modifier.fillMaxWidth()
+                enabled = isButtonEnabled
             )
 
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
 
-            if (totalSecondsRemaining  > 0) {
-                val seconds = totalSecondsRemaining % 60
-
+            if (secondsRemaining  > 0) {
                 Text(
-                    text = stringResource(R.string.auth_verify_expiry, seconds),
+                    text = stringResource(R.string.auth_verify_expiry, secondsRemaining),
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.appColors.textSecondary,
                         fontWeight = FontWeight.Medium,
@@ -150,11 +158,10 @@ fun VerificationScreen(
                 Text(
                     text = stringResource(R.string.auth_verify_resend_btn),
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
+                        color = MaterialTheme.appColors.textSecondary,
                     ),
                     modifier = Modifier.clickable(enabled = !isLoading) {
-                        onResendCodeClick()
+                        onResendOtpClick()
                     }
                 )
 
@@ -168,12 +175,13 @@ fun VerificationScreen(
 
 @Composable
 private fun VerificationCodeInput(
-    codeLength: Int,
     codeValue: String,
-    isError: Boolean,
+    errorResId: Int?,
     enabled: Boolean,
     onCodeChanged: (String) -> Unit
 ){
+    val isError = errorResId != null
+    val codeLength = AuthConstants.CODE_LENGTH
     val focusRequesters = remember { List(codeLength) { FocusRequester() } }
 
     Column(
@@ -276,17 +284,23 @@ private fun VerificationCodeInput(
 @Composable
 private fun VerificationScreenPreview(){
     AppTheme {
+        var maskedEmail by remember { mutableStateOf("em**@mail.ru") }
+        var otpCode by remember { mutableStateOf("123") }
+        var errorResId by remember { mutableStateOf<Int?>(R.string.err_auth_invalid_code) }
+
         VerificationScreen(
-            maskedEmail = "em**@mail.ru",
-            otpCodeValue = "123",
-            onOtpCodeChanged = {},
+            maskedEmail = maskedEmail,
+            otpCodeValue = otpCode,
+            onOtpCodeChanged = { newCode ->
+                otpCode = newCode
+                errorResId = null
+            },
+            isButtonEnabled = true,
             isLoading = false,
-//            errorResId = null,
-            errorResId = R.string.err_auth_invalid_code,
-            codeLength = 6,
-            totalSecondsRemaining = 45,
+            errorResId = errorResId,
+            secondsRemaining = 20,
             onVerifyClick = {},
-            onResendCodeClick = {}
+            onResendOtpClick = {}
         )
     }
 
@@ -295,9 +309,8 @@ private fun VerificationScreenPreview(){
 @Preview(showBackground = true, locale="ru")
 @Composable
 private fun VerificationCodeInputPreview(){
-    val codeLength = 6
     var codeValue by remember { mutableStateOf("1234") }
-    var isError by remember { mutableStateOf(true) }
+    var errorResId by remember { mutableStateOf<Int?>(R.string.err_auth_invalid_code) }
 
     AppTheme {
         Box(
@@ -307,12 +320,12 @@ private fun VerificationCodeInputPreview(){
                     .padding(MaterialTheme.spacing.medium)
         ) {
             VerificationCodeInput(
-                codeLength = codeLength,
                 codeValue = codeValue,
-                isError = isError,
+                errorResId = errorResId,
                 enabled = true,
                 onCodeChanged = { updatedCode ->
                     codeValue = updatedCode
+                    errorResId = null
                 }
             )
         }

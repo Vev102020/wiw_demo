@@ -1,10 +1,10 @@
 package com.wiwchat.core.di
 
-import com.wiwchat.shared.common.data.local.impl.TokenProviderImpl
 import com.wiwchat.shared.common.data.network.WebSocketManager
 import com.wiwchat.shared.features.auth.data.api.AuthApi
 import com.wiwchat.shared.common.domain.repository.TokenProvider
-import dagger.Binds
+import com.wiwchat.shared.core.notification.NotificationManager
+import com.wiwchat.shared.features.profile.data.api.ProfileApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,7 +30,19 @@ object KoinBridgeModule {
 
     @Provides
     @Singleton
+    fun provideProfileApi(): ProfileApi {
+        return KoinPlatformTools.defaultContext().get().get<ProfileApi>()
+    }
+
+    @Provides
+    @Singleton
     fun provideWebSocketManager(): WebSocketManager {
         return KoinPlatformTools.defaultContext().get().get<WebSocketManager>()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationManager(): NotificationManager{
+        return KoinPlatformTools.defaultContext().get().get<NotificationManager>()
     }
 }

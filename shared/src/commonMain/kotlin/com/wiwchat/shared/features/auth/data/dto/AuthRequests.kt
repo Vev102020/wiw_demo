@@ -15,7 +15,7 @@ data class RegisterRequest(
 )
 
 @Serializable
-data class VerifyEmailRequest(
+data class VerifyOtpRequest(
     val email: String,
     val code: String,
     val registrationSessionId: String
@@ -27,16 +27,17 @@ data class ForgotPasswordRequest(
 )
 
 @Serializable
-data class ResetPasswordRequest(
+data class VerifyResetOtpRequest(
     val email: String,
     val code: String,
     val resetToken: String,
-    val newPassword: String
 )
 
 @Serializable
-data class ForgotPasswordResponse(
-    val resetToken: String
+data class ResetPasswordRequest(
+    val email: String,
+    val resetToken: String,
+    val newPassword: String
 )
 
 @Serializable
@@ -46,7 +47,7 @@ data class ChangePasswordRequest(
 )
 
 @Serializable
-data class ResendCodeRequest(
+data class ResendOtpRequest(
     val email: String,
     val registrationSessionId: String
 )

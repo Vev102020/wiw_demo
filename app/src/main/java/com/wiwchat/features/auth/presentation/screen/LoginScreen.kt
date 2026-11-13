@@ -9,20 +9,22 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.*
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
-import com.wiwchat.core.ui.components.AuthNavLink
-import com.wiwchat.core.ui.components.PrimaryButton
-import com.wiwchat.core.ui.theme.AppTheme
-import com.wiwchat.core.ui.theme.appColors
-import com.wiwchat.core.ui.theme.spacing
-import com.wiwchat.features.auth.presentation.components.ValidatedInputField
-import com.wiwchat.features.auth.presentation.state.EmailFieldState
-import com.wiwchat.features.auth.presentation.state.PasswordFieldState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wiwchat.core.ui.components.auth.AuthNavLink
+import com.wiwchat.core.ui.components.base.InputField
+import com.wiwchat.core.ui.components.base.PrimaryButton
+import com.wiwchat.core.ui.theme.*
+import com.wiwchat.core.ui.util.mapAuthErrorToId
 import com.wiwchat.features.auth.presentation.viewmodel.LoginViewModel
 
 @Composable
@@ -36,12 +38,27 @@ fun LoginRoute(
 
     BackHandler(enabled = true) { onNavigateBack() }
 
+    val emailText by viewModel.emailInput.text.collectAsStateWithLifecycle()
+    val emailErrorCode by viewModel.emailInput.error.collectAsStateWithLifecycle()
+
+    val passwordText by viewModel.passwordInput.text.collectAsStateWithLifecycle()
+    val passwordErrorCode by viewModel.passwordInput.error.collectAsStateWithLifecycle()
+
+    val isButtonEnabled by viewModel.isButtonEnabled.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+
+
     LoginScreen(
-        emailValue = viewModel.emailInput,
-        passwordValue = viewModel.passwordInput,
-        isButtonEnabled = viewModel.isButtonEnabled,
-        isLoading = viewModel.isLoading.value,
-        errorResId = viewModel.serverErrorResId.value,
+        emailText = emailText,
+        emailError = emailErrorCode?.let { mapAuthErrorToId(it) },
+        passwordText = passwordText,
+        passwordError = passwordErrorCode?.let { mapAuthErrorToId(it) },
+        isButtonEnabled = isButtonEnabled,
+        isLoading = isLoading,
+        onEmailChanged = { viewModel.emailInput.onTextChanged(it) },
+        onEmailFocusChanged = { viewModel.emailInput.onFocusChanged(it) },
+        onPasswordChanged = { viewModel.passwordInput.onTextChanged(it) },
+        onPasswordFocusChanged = { viewModel.passwordInput.onFocusChanged(it) },
         onLoginClick = { viewModel.loginToServer(onNavigateToVerification) },
         onNavigateToRegister = onNavigateToRegister,
         onForgotClick = onNavigateToForgot
@@ -51,15 +68,23 @@ fun LoginRoute(
 
 @Composable
 private fun LoginScreen (
-    emailValue: EmailFieldState,
-    passwordValue: PasswordFieldState,
+    emailText: String,
+    emailError: Int?,
+    passwordText: String,
+    passwordError: Int?,
     isButtonEnabled: Boolean,
     isLoading: Boolean,
-    errorResId: Int?,
+    onEmailChanged: (String) -> Unit,
+    onEmailFocusChanged: (Boolean) -> Unit,
+    onPasswordChanged: (String) -> Unit,
+    onPasswordFocusChanged: (Boolean) -> Unit,
     onLoginClick: () -> Unit,
     onNavigateToRegister: () -> Unit,
     onForgotClick: () -> Unit
 ){
+
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
 
     Scaffold(){
         paddingValues ->
@@ -83,28 +108,57 @@ private fun LoginScreen (
                 ),
             )
 
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraLarge))
 
-            ValidatedInputField(
-                fieldState = emailValue,
-                label = stringResource(R.string.auth_email_label)
+
+            // email
+            InputField(
+                value = emailText,
+                onValueChange = onEmailChanged,
+                label = stringResource(R.string.auth_email_label),
+                isError = emailError != null,
+                errorMessage = emailError?.let { stringResource(id = it) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { onEmailFocusChanged(it.isFocused) }
             )
 
 
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
-            var isPasswordVisible by remember { mutableStateOf(false) }
-            ValidatedInputField(
-                fieldState = passwordValue,
+            // password
+            InputField(
+                value = passwordText,
+                onValueChange = onPasswordChanged,
                 label = stringResource(R.string.auth_password_label),
-                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                isError = passwordError != null,
+                errorMessage = passwordError?.let { stringResource(id = it) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                visualTransformation = if (isPasswordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
                 trailingIcon = {
-                    val iconRes = if (isPasswordVisible) R.drawable.ic_eye_open else R.drawable.ic_eye_closed
                     IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                        Icon(painter = painterResource(id = iconRes), contentDescription = null)
+                        Icon(
+                            painter = painterResource(
+                                id = if (isPasswordVisible) R.drawable.ic_eye_open else R.drawable.ic_eye_closed
+                            ),
+                            contentDescription = null
+                        )
                     }
-                }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { onPasswordFocusChanged(it.isFocused) }
             )
 
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
@@ -130,17 +184,6 @@ private fun LoginScreen (
                 enabled = isButtonEnabled
             )
 
-            errorResId?.let { resId ->
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                Text(
-                    text = stringResource(id = resId),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Start
-                )
-            }
-
             Spacer(modifier = Modifier.weight(1f))
 
             AuthNavLink(
@@ -152,28 +195,26 @@ private fun LoginScreen (
 
         }
     }
-
-
 }
-
 
 @Preview(showBackground = true, locale="ru")
 @Composable
 private fun LoginScreenPreview(){
-    val previewEmailState = EmailFieldState().apply {
-        onTextChanged("username@mail.com")
-    }
-    val previewPasswordState = PasswordFieldState(isRegistrationMode = false).apply {
-        onTextChanged("password123")
-    }
+    val previewEmailState by remember { mutableStateOf("username@mail.com") }
+    val previewPasswordState by remember { mutableStateOf("password123") }
 
     AppTheme {
         LoginScreen(
-            emailValue = previewEmailState,
-            passwordValue = previewPasswordState,
-            isButtonEnabled = true,
+            emailText = previewEmailState,
+            emailError = null,
+            passwordText = previewPasswordState,
+            passwordError = R.string.err_auth_pass_length,
+            isButtonEnabled = false,
             isLoading = false,
-            errorResId = null,
+            onEmailChanged = {},
+            onEmailFocusChanged = {},
+            onPasswordChanged = {},
+            onPasswordFocusChanged = {},
             onLoginClick = {},
             onNavigateToRegister = {},
             onForgotClick = {}

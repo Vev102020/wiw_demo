@@ -27,10 +27,13 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import io.ktor.http.Url
 import com.wiwchat.shared.core.config.AppEnvironment
+import com.wiwchat.shared.core.notification.NotificationManager
+import com.wiwchat.shared.core.notification.NotificationManagerImpl
 import com.wiwchat.shared.features.auth.data.dto.TokenResponse
 import com.wiwchat.shared.features.auth.domain.repository.AuthRepository
-import com.wiwchat.shared.features.auth.domain.usecase.ResetPasswordUseCase
-import com.wiwchat.shared.features.auth.domain.usecase.VerifyEmailUseCase
+import com.wiwchat.shared.features.auth.domain.usecase.*
+import com.wiwchat.shared.features.profile.data.dto.UserProfileDto
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.http.encodedPath
 
@@ -50,6 +53,15 @@ val networkModule = module {
                     port = if (parsedUrl.port > 0) parsedUrl.port else protocol.defaultPort
                     encodedPath = basePath
                 }
+            }
+
+            install(HttpTimeout) {
+                // Время на установку физического соединения с портом (Docker)
+                connectTimeoutMillis = 5000
+                // Время на ожидание пакетов от сокета (то, где у вас зависало на минуту)
+                socketTimeoutMillis = 5000
+                // Общий лимит на весь цикл запроса
+                requestTimeoutMillis = 8000
             }
 
             install(ContentNegotiation) {
@@ -122,7 +134,8 @@ val networkModule = module {
         WebSocketManager(
             client = get(),
             tokenProvider = get(),
-            serverUrl = parsedUrl.host
+            serverUrl = parsedUrl.host,
+            serverPort = if (parsedUrl.port > 0) parsedUrl.port else parsedUrl.protocol.defaultPort
         )
     }
 
@@ -134,9 +147,11 @@ val repositoryModule = module {}
 
 // Модуль бизнес-логики
 val useCaseModule = module {
+    single<NotificationManager> { NotificationManagerImpl() }
+
     factory { LoginUseCase(get<AuthRepository>() ) }
-    factory { ResetPasswordUseCase(get<AuthRepository>()) }
-    factory { VerifyEmailUseCase(get<AuthRepository>()) }
+    factory { ResendOtpUseCase(get<AuthRepository>()) }
+    factory { VerifyOtpUseCase(get<AuthRepository>()) }
 }
 
 val sharedDatabaseModule = module {
@@ -155,6 +170,7 @@ val sharedDatabaseModule = module {
     single<UserDao> {
         get<AppDatabase>().userDao()
     }
+
 }
 
 // Общий список всех модулей shared-слоя

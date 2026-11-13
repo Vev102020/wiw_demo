@@ -176,7 +176,7 @@ val DarkComponentStyles = ComponentStyles(
                 containerColor = Color.Transparent,
                 contentColor = Blue300,
                 disabledContainerColor = Gray100,
-                disabledContentColor = Gray300
+                disabledContentColor = Gray400
             )
         },
         textStyle = {
@@ -191,7 +191,7 @@ val DarkComponentStyles = ComponentStyles(
                 containerColor = Color.Transparent,
                 contentColor = White100,
                 disabledContainerColor = Color.Transparent,
-                disabledContentColor = Gray300
+                disabledContentColor = Gray400
             )
         },
         textStyle = {
@@ -203,7 +203,7 @@ val DarkComponentStyles = ComponentStyles(
             if (enabled)
                 BorderStroke(1.dp, White100)
             else
-                BorderStroke(1.dp, Gray300) // Белая рамка
+                BorderStroke(1.dp, Gray400)
         }
     ),
 

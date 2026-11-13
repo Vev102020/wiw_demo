@@ -3,7 +3,7 @@ package di
 
 import core.plugins.*
 import features.auth.domain.service.*
-import features.profile.domain.service.UserService
+import features.profile.domain.service.UserProfileService
 import org.koin.dsl.module
 
 val serverBackendModule = module {
@@ -15,5 +15,5 @@ val serverBackendModule = module {
             jwtAudience = jwtAudience,
             emailService = get()
         )}
-    single { UserService() }
+    single { UserProfileService() }
 }

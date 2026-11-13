@@ -2,9 +2,9 @@ package core.plugins
 
 import com.wiwchat.shared.common.data.dto.*
 import com.wiwchat.shared.common.data.dto.enums.WebSocketSystemAction
-import com.wiwchat.shared.core.user.data.dto.UserStatusEvent
 import com.wiwchat.shared.core.user.data.dto.enums.UserOnlineStatus
-import features.profile.domain.service.UserService
+import features.profile.domain.service.UserProfileService
+import io.ktor.http.HttpHeaders
 import io.ktor.server.application.*
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -32,10 +32,11 @@ object WebsocketsErrorMessages {
 }
 
 
-val activeSessions = ConcurrentHashMap<String, WebSocketServerSession>()
+
+val activeSessions = ConcurrentHashMap<String, ConcurrentHashMap<String, DefaultWebSocketServerSession>>()
 
 fun Application.configureWebsockets() {
-    val userService by inject<UserService>()
+    val userProfileService by inject<UserProfileService>()
 
     install(WebSockets) {
         pingPeriodMillis = 15_000
@@ -54,12 +55,22 @@ fun Application.configureWebsockets() {
                         )
                     )
 
+                val rawToken = call.request.headers[HttpHeaders.Authorization]?.removePrefix("Bearer ")?.trim()
+                    ?: UUID.randomUUID().toString()
+
                 val userIdUUID = UUID.fromString(userIdStr)
-                activeSessions[userIdStr] = this
+
+                // Регистрируем конкретное устройство
+                val userSessions = activeSessions.computeIfAbsent(userIdStr) { ConcurrentHashMap() }
+                val wasOffline = userSessions.isEmpty()
+                userSessions[rawToken] = this
 
                 try {
-                    userService.setUserOnline(userIdUUID)
-                    println("[DEBUG] Пользователь $userIdStr теперь ONLINE")
+                    // Ставим статус ONLINE в БД только при подключении ПЕРВОГО устройства
+                    if (wasOffline) {
+                        userProfileService.setUserOnline(userIdUUID)
+                        println("[DEBUG] Пользователь $userIdStr теперь ONLINE")
+                    }
 
                     for (frame in incoming) {
                         // Просто удерживаем соединение живым.
@@ -70,71 +81,91 @@ fun Application.configureWebsockets() {
                     // Логируем системную ошибку сокета на сервере без раскрытия ПДн
                     println("[INFO]: Соединение WebSocket для пользователя $userIdStr было прервано: ${e.message}")
                 } finally {
-                    // Удаляем сессию из карты ТОЛЬКО если это именно НАШЕ соединение (защита от Race Condition)
-                    activeSessions.remove(userIdStr, this)
-                    // Пользователь вышел из сети (при любом обрыве связи)
-                    val lastSeenMilli = userService.setUserOffline(userIdUUID)
-                    println("[DEBUG] Пользователь $userIdStr теперь OFFLINE. Last Seen: $lastSeenMilli")
+                    // Удаляем сессию текущего устройства
+                    userSessions.remove(rawToken, this)
+
+                    // Переводим в OFFLINE только если у пользователя не осталось ни одного активного окна/телефона
+                    if (userSessions.isEmpty()) {
+                        activeSessions.remove(userIdStr, userSessions)
+                        val lastSeenMilli = userProfileService.setUserOffline(userIdUUID)
+                        println("[DEBUG] Пользователь $userIdStr теперь OFFLINE. Last Seen: $lastSeenMilli")
+                    }
                 }
             }
         }
     }
 }
 
-suspend fun forceLogoutUser(userId: String){
-    val session = activeSessions[userId]
-    if (session != null) {
-        try {
-            val messageObj = WebSocketSystemDto(
-                action = WebSocketSystemAction.FORCE_LOGOUT,
-                reason = WebsocketsErrorMessages.WS_FORCE_LOGOUT_REASON
-            )
-            val jsonText = Json.encodeToString(messageObj)
+/**
+ * Выход пользователя из сессии
+ */
+suspend fun forceLogoutUser(
+    userId: String,
+    excludeAccessToken: String? = null
+){
+    val userSessions  = activeSessions[userId] ?: return
 
+    val messageObj = WebSocketSystemDto(
+        action = WebSocketSystemAction.FORCE_LOGOUT,
+        reason = WebsocketsErrorMessages.WS_FORCE_LOGOUT_REASON
+    )
+    val jsonText = Json.encodeToString(messageObj)
+
+    userSessions.forEach { (token, session) ->
+        // Пропускаем инициатора смены пароля
+        if (token == excludeAccessToken) return@forEach
+
+        try {
             session.send(Frame.Text(jsonText))
             session.close(
                 CloseReason(
-                CloseReason.Codes.NORMAL,
-                WebsocketsErrorMessages.LOG_WS_CLOSE_FORCE_LOGOUT
+                    CloseReason.Codes.NORMAL,
+                    WebsocketsErrorMessages.LOG_WS_CLOSE_FORCE_LOGOUT
                 )
             )
         } catch (e: Exception) {
-            // Если сокет уже был мертв, просто игнорируем ошибку отправки
+            // Игнорируем ошибку, если сокет уже нет
         } finally {
-            activeSessions.remove(userId, session)
+            userSessions.remove(token, session)
         }
     }
+
+    if (userSessions.isEmpty()) {
+        activeSessions.remove(userId, userSessions)
+    }
+
 }
 
 /**
  * Принудительное выкидывание заблокированного пользователя по WebSocket
  */
 suspend fun suspendUserWebSocket(userId: String) {
-    val session = activeSessions[userId]
-    if (session != null) {
+    val userSessions  = activeSessions[userId] ?: return
+
+    val messageObj = WebSocketSystemDto(
+        action = WebSocketSystemAction.ACCOUNT_SUSPENDED,
+        reason = WebsocketsErrorMessages.WS_ACCOUNT_SUSPENDED_REASON
+    )
+    val jsonText = Json.encodeToString(messageObj)
+
+    userSessions.forEach { (token, session) ->
         try {
-            // Собираем системный DTO с экшеном блокировки аккаунта
-            val messageObj = WebSocketSystemDto(
-                action = WebSocketSystemAction.ACCOUNT_SUSPENDED,
-                reason = WebsocketsErrorMessages.WS_ACCOUNT_SUSPENDED_REASON
-            )
-            val jsonText = Json.encodeToString(messageObj)
-
-            // Отправляем фрейм клиенту
             session.send(Frame.Text(jsonText))
-
-            // Закрываем сокет с кодом нарушения политики безопасности
             session.close(
                 CloseReason(
-                CloseReason.Codes.VIOLATED_POLICY,
-                WebsocketsErrorMessages.LOG_WS_CLOSE_SUSPENDED)
+                    CloseReason.Codes.VIOLATED_POLICY,
+                    WebsocketsErrorMessages.LOG_WS_CLOSE_SUSPENDED
+                )
             )
         } catch (e: Exception) {
-            // Если сокет уже отвалился до отправки — просто игнорируем ошибку
+            // Игнорируем, если сокет уже отвалился
         } finally {
-            // Удаляем из мапы активных соединений
-            activeSessions.remove(userId, session)
+            userSessions.remove(token, session)
         }
+    }
+
+    if (userSessions.isEmpty()) {
+        activeSessions.remove(userId, userSessions)
     }
 }
 

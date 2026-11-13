@@ -2,11 +2,12 @@
 <resources>
     <string name="err_network_timeout">Server connection timed out. Please check your internet connection.</string>
     <string name="err_generic_unknown">An unexpected error occurred on the server. Please try again later.</string>
+    <string name="err_server_unreachable">The server is temporarily unavailable. Please try again later.</string>
     <string name="err_server_maintenance">The server is temporarily unavailable due to technical maintenance. Please try again later.</string>
     <string name="err_auth_too_many_attempts">Too many failed attempts. Access blocked. Please try again later.</string>
 
     <!-- Auth -->
-    <string name="err_auth_email_too_long">The entered email is too long. Maximum 50 characters.</string>
+    <string name="err_auth_email_too_long">The entered email is too long.</string>
     <string name="err_auth_invalid_code">Invalid code. Please try again.</string>
     <string name="err_auth_code_expired">The verification code has expired. Please request a new one.</string>
 
@@ -19,4 +20,13 @@
     <string name="err_auth_pass_upper">The password must contain at least one uppercase letter.</string>
     <string name="err_auth_pass_lower">The password must contain at least one lowercase letter.</string>
     <string name="err_auth_passwords_dont_match">Passwords do not match. Please re-enter.</string>
+    <string name="err_auth_old_password_invalid">Incorrect current password</string>
+
+    <!-- Profile -->
+    <string name="err_profile_empty_display_name">Enter your name</string>
+    <string name="err_profile_display_name_length">Name must be between 1 and 50 characters</string>
+    <string name="err_profile_empty_username">Enter a username</string>
+    <string name="err_profile_username_length">Username must be between 4 and 32 characters</string>
+    <string name="err_profile_username_format">Only Latin letters, numbers, and underscores are allowed</string>
+    <string name="err_profile_username_taken">This username is already taken</string>
 </resources>

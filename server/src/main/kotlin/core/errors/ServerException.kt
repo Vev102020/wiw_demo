@@ -1,6 +1,6 @@
 package core.errors
 
-import com.wiwchat.shared.common.data.errors.ServerErrorCode
+import com.wiwchat.shared.common.domain.errors.ServerErrorCode
 import io.ktor.http.HttpStatusCode
 
 open class ServerException(

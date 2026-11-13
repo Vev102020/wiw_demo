@@ -1,6 +1,6 @@
 package core.errors
 
-import com.wiwchat.shared.common.data.errors.AuthErrorCode
+import com.wiwchat.shared.common.domain.errors.AuthErrorCode
 import io.ktor.http.HttpStatusCode
 
 sealed class AuthException(

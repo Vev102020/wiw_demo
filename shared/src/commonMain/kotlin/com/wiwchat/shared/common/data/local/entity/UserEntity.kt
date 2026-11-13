@@ -8,6 +8,7 @@ data class UserEntity(
     @PrimaryKey val id: String,
     val email: String,
     val username: String?,
+    val displayName: String?,
     val role: String,
     val isActive: Boolean,
 )

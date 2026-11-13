@@ -1,7 +1,7 @@
 package core.plugins
 
 import com.wiwchat.shared.common.data.dto.ErrorResponse
-import com.wiwchat.shared.common.data.errors.ServerErrorCode
+import com.wiwchat.shared.common.domain.errors.ServerErrorCode
 import core.errors.AppException
 import core.errors.InternalServerErrorException
 import core.errors.NotFoundException
@@ -11,7 +11,6 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.MissingFieldException
-import kotlinx.serialization.SerializationException
 import io.ktor.server.plugins.BadRequestException
 
 object StatusPagesErrorMessages {

@@ -1,6 +1,6 @@
 package core.errors
 
-import com.wiwchat.shared.common.data.errors.ApiErrorCode
+import com.wiwchat.shared.common.domain.errors.ApiErrorCode
 import io.ktor.http.HttpStatusCode
 
 open class AppException(

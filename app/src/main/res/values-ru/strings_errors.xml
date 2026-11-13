@@ -2,11 +2,12 @@
 <resources>
     <string name="err_network_timeout">Превышено время ожидания ответа от сервера. Проверьте интернет-соединение.</string>
     <string name="err_generic_unknown">Произошла непредвиденная ошибка на сервере. Пожалуйста, повторите попытку позже.</string>
+    <string name="err_server_unreachable">Сервер временно недоступен. Пожалуйста, повторите попытку позже.</string>
     <string name="err_server_maintenance">Сервер временно недоступен. Мы уже проводим технические работы, пожалуйста, попробуйте позже.</string>
     <string name="err_auth_too_many_attempts">Слишком много неудачных попыток. Доступ заблокирован. Попробуйте позже.</string>
 
     <!-- Auth -->
-    <string name="err_auth_email_too_long">Введенный email слишком длинный. Максимум 50 символа.</string>
+    <string name="err_auth_email_too_long">Введенный email слишком длинный.</string>
     <string name="err_auth_invalid_code">Неверный код. Попробуйте еще раз.</string>
     <string name="err_auth_code_expired">Срок действия кода истек. Запросите новый.</string>
 
@@ -18,6 +19,14 @@
     <string name="err_auth_pass_digit">Пароль должен содержать хотя бы одну цифру.</string>
     <string name="err_auth_pass_upper">Пароль должен содержать хотя бы одну заглавную букву.</string>
     <string name="err_auth_pass_lower">Пароль должен содержать хотя бы одну строчную букву.</string>
-
     <string name="err_auth_passwords_dont_match">Пароли не совпадают. Повторите ввод.</string>
+    <string name="err_auth_old_password_invalid">Неверный текущий пароль</string>
+
+    <!-- Profile -->
+    <string name="err_profile_empty_display_name">Введите ваше имя</string>
+    <string name="err_profile_display_name_length">Имя должно содержать от 1 до 50 символов</string>
+    <string name="err_profile_empty_username">Введите имя пользователя</string>
+    <string name="err_profile_username_length">Имя пользователя должно содержать от 4 до 32 символов</string>
+    <string name="err_profile_username_format">Допустимы только латинские буквы, цифры и нижнее подчёркивание</string>
+    <string name="err_profile_username_taken">Это имя пользователя уже занято</string>
 </resources>

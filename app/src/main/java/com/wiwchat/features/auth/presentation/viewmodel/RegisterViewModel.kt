@@ -1,124 +1,133 @@
 package com.wiwchat.features.auth.presentation.viewmodel
 
-
-import com.wiwchat.app.R
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import androidx.lifecycle.SavedStateHandle
-import com.wiwchat.features.auth.presentation.state.EmailFieldState
-import com.wiwchat.features.auth.presentation.state.PasswordFieldState
-import com.wiwchat.shared.common.data.errors.AuthErrorCode
-import com.wiwchat.shared.common.data.network.AppError
-import com.wiwchat.shared.common.data.network.DomainResult
+import kotlinx.coroutines.flow.combine
+import com.wiwchat.shared.common.domain.errors.AuthErrorCode
+import com.wiwchat.shared.common.domain.model.AppError
+import com.wiwchat.shared.common.domain.model.DomainResult
+import com.wiwchat.shared.core.forms.FormFieldState
+import com.wiwchat.shared.core.notification.NotificationManager
+import com.wiwchat.shared.features.auth.domain.constants.AuthConstants
 import com.wiwchat.shared.features.auth.domain.repository.AuthRepository
+import com.wiwchat.shared.features.auth.domain.validator.AuthValidator
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.*
 
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val notificationManager: NotificationManager,
 ) : ViewModel(){
 
-    val emailInput = EmailFieldState()
-    val passwordInput = PasswordFieldState(isRegistrationMode = true)
-    val passwordRepeatInput = PasswordFieldState(isRegistrationMode = false)
+    val emailInput = FormFieldState(
+        scope = viewModelScope,
+        maxLength = AuthConstants.EMAIL_MAX_LENGTH,
+        validator = { text -> AuthValidator.validateEmail(text) }
+    )
 
-    private val _isPolicyChecked = mutableStateOf(false)
-    val isPolicyChecked: State<Boolean> = _isPolicyChecked
+    val passwordInput = FormFieldState(
+        scope = viewModelScope,
+        maxLength = AuthConstants.PASSWORD_MAX_LENGTH,
+        validator = { text -> AuthValidator.validatePassword(text) }
+    )
 
-    private val _isLoading = mutableStateOf(false)
-    val isLoading: State<Boolean> = _isLoading
-
-    private val _serverErrorResId = mutableStateOf<Int?>(null)
-    val serverErrorResId: State<Int?> = _serverErrorResId
-
-    private var wasPasswordRepeatFocused = false
-
-    fun onPasswordRepeatFocusChanged(isFocused: Boolean) {
-        if (isFocused) {
-            wasPasswordRepeatFocused = true
-        } else if (wasPasswordRepeatFocused) {
-            validatePasswordMatch()
+    val passwordRepeatInput = FormFieldState(
+        scope = viewModelScope,
+        maxLength = AuthConstants.PASSWORD_MAX_LENGTH,
+        validator = { text ->
+            if (text != passwordInput.text.value) {
+                AuthErrorCode.AUTH_PASSWORD_INVALID_LENGTH
+            } else null
         }
-    }
+    )
 
-    private fun validatePasswordMatch(): Boolean {
-        val matches = passwordInput.text.value == passwordRepeatInput.text.value
-        passwordRepeatInput.errorResId.value = if (!matches) {
-            R.string.err_auth_passwords_dont_match
-        } else {
-            null
-        }
-        return matches
-    }
+    private val _isPolicyChecked = MutableStateFlow(false)
+    val isPolicyChecked: StateFlow<Boolean> = _isPolicyChecked.asStateFlow()
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    val isButtonEnabled: StateFlow<Boolean> = combine(
+        emailInput.isValid,
+        passwordInput.isValid,
+        passwordRepeatInput.isValid,
+        _isPolicyChecked,
+        _isLoading
+    ) { emailValid: Boolean, passValid: Boolean, repeatValid: Boolean, policyChecked: Boolean, loading: Boolean ->
+        emailValid && passValid && repeatValid && policyChecked && !loading
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
 
     fun onPolicyCheckedChange(checked: Boolean) {
         _isPolicyChecked.value = checked
-        if (_serverErrorResId.value != null) _serverErrorResId.value = null
     }
 
-    val isButtonEnabled: Boolean
-        get() = emailInput.text.value.isNotBlank() &&
-                passwordInput.text.value.isNotBlank() &&
-                passwordRepeatInput.text.value.isNotBlank() &&
-                emailInput.errorResId.value == null &&
-                passwordInput.errorResId.value == null &&
-                passwordRepeatInput.errorResId.value == null &&
-                _isPolicyChecked.value &&
-                !_isLoading.value
 
     fun registerToServer(onNavigateToVerification: (email: String, token: String) -> Unit) {
-        val isEmailValid = emailInput.validate(showEmptyError = true)
-        val isPasswordValid = passwordInput.validate(showEmptyError = true)
-        val isRepeatValid = validatePasswordMatch()
+        val isEmailValid = emailInput.validate()
+        val isPasswordValid = passwordInput.validate()
 
-        if (!isEmailValid || !isPasswordValid || !isRepeatValid || !_isPolicyChecked.value) return
+        // Принудительно форсим проверку второго поля на совпадение перед отправкой запроса
+        val isRepeatValid = passwordRepeatInput.validate()
+
+        // Если строки физически не равны, прерываем выполнение еще до отправки на сервер
+        if (!isEmailValid || !isPasswordValid || !isRepeatValid || passwordInput.text.value != passwordRepeatInput.text.value || !_isPolicyChecked.value) return
 
         viewModelScope.launch {
             _isLoading.value = true
-            _serverErrorResId.value = null
+            val cleanEmail = emailInput.text.value.trim()
 
-            when (val result = authRepository.register(
-                emailInput.text.value.trim(),
-                passwordInput.text.value
-            )) {
+            when (val result = authRepository.register(cleanEmail, passwordInput.text.value)) {
                 is DomainResult.Success -> {
                     val responseBody = result.value
-                    onNavigateToVerification(
-                        emailInput.text.value.trim(),
-                        responseBody.registrationSessionId
-                    )
+                    onNavigateToVerification(cleanEmail, responseBody.registrationSessionId)
                 }
                 is DomainResult.Failure -> {
-                    _serverErrorResId.value = when (val error = result.error) {
-                        is AppError.NetworkUnavailable -> R.string.err_network_timeout
-                        is AppError.Timeout -> R.string.err_network_timeout
-                        is AppError.ServerMaintenance -> R.string.err_server_maintenance
-                        is AppError.Unknown -> R.string.err_generic_unknown
-                        is AppError.Backend -> {
-                            when (error.code) {
-                                AuthErrorCode.AUTH_EMPTY_EMAIL -> R.string.err_auth_empty_email
-                                AuthErrorCode.AUTH_EMPTY_PASSWORD -> R.string.err_auth_empty_password
-                                AuthErrorCode.AUTH_INVALID_EMAIL_FORMAT -> R.string.err_auth_invalid_email_format
-
-                                // Серверные ошибки сложной валидации пароля
-                                AuthErrorCode.AUTH_PASSWORD_INVALID_LENGTH -> R.string.err_auth_pass_length
-                                AuthErrorCode.AUTH_PASSWORD_NO_DIGIT -> R.string.err_auth_pass_digit
-                                AuthErrorCode.AUTH_PASSWORD_NO_UPPERCASE -> R.string.err_auth_pass_upper
-                                AuthErrorCode.AUTH_PASSWORD_NO_LOWERCASE -> R.string.err_auth_pass_lower
-
-                                else -> R.string.err_generic_unknown
-                            }
-                        }
-                    }
+                    handleFailure(result.error)
                 }
             }
             _isLoading.value = false
+        }
+    }
+
+    private fun handleFailure(error: AppError) {
+        if (error is AppError.Backend) {
+            val authCode = error.code as? AuthErrorCode
+            if (authCode != null) {
+                handleBackendError(authCode, error)
+            } else {
+                notificationManager.showNotification(error)
+            }
+        } else {
+            notificationManager.showNotification(error)
+        }
+    }
+
+
+    private fun handleBackendError(code: AuthErrorCode, originalError: AppError.Backend) {
+        when (code) {
+            AuthErrorCode.AUTH_EMPTY_EMAIL,
+            AuthErrorCode.AUTH_INVALID_EMAIL_FORMAT -> {
+                emailInput.setErrorFromBackend(code)
+            }
+            AuthErrorCode.AUTH_EMPTY_PASSWORD,
+            AuthErrorCode.AUTH_PASSWORD_INVALID_LENGTH,
+            AuthErrorCode.AUTH_PASSWORD_NO_DIGIT,
+            AuthErrorCode.AUTH_PASSWORD_NO_UPPERCASE,
+            AuthErrorCode.AUTH_PASSWORD_NO_LOWERCASE -> {
+                passwordInput.setErrorFromBackend(code)
+            }
+            else -> {
+                notificationManager.showNotification(originalError)
+            }
         }
     }
 

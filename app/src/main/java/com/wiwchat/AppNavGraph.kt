@@ -5,7 +5,8 @@ import androidx.navigation.compose.*
 import com.wiwchat.features.auth.navigation.*
 import com.wiwchat.features.auth.presentation.viewmodel.*
 import com.wiwchat.features.main.navigation.*
-
+import com.wiwchat.features.settings.navigation.SettingsDestinations
+import com.wiwchat.features.settings.navigation.settingsNavGraph
 
 @Composable
 fun AppNavGraph(
@@ -14,23 +15,27 @@ fun AppNavGraph(
     val navController = rememberNavController()
     val sessionState by authViewModel.sessionState.collectAsState()
 
-    // Реактивный менеджер сессий: управляет переходами между графами без утечек памяти
     LaunchedEffect(sessionState) {
-        when (sessionState) {
+        when (val state = sessionState) {
             is SessionState.Authenticated -> {
-                navController.navigate(MainGraph) {
-                    // Очищаем весь AuthGraph из стэка, делая его инклюзивным
-                    popUpTo(AuthGraph) { inclusive = true }
+                if (state.isProfileCompleted) {
+                    // Имя уже заполнено -> пускаем в основной граф чатов
+                    navController.navigate(MainGraph) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                } else {
+                    // Имя еще null -> открываем экран онбординга
+                    navController.navigate(SettingsDestinations.SetupProfile) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             }
             is SessionState.Unauthenticated -> {
                 navController.navigate(AuthGraph) {
-                    popUpTo(MainGraph) { inclusive = true }
+                    popUpTo(0) { inclusive = true }
                 }
             }
-            is SessionState.Idle -> {
-                // Ожидание загрузки состояния сессии из локальной БД
-            }
+            is SessionState.Idle -> Unit
         }
     }
 
@@ -40,5 +45,6 @@ fun AppNavGraph(
     ) {
         authNavGraph(navController)
         mainNavGraph(navController)
+        settingsNavGraph(navController)
     }
 }

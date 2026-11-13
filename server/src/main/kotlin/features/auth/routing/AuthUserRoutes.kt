@@ -1,6 +1,6 @@
 package features.auth.routing
 
-import com.wiwchat.shared.common.data.errors.AuthErrorCode
+import com.wiwchat.shared.common.domain.errors.AuthErrorCode
 import features.auth.domain.service.AuthService
 import io.ktor.http.*
 import io.ktor.server.plugins.ratelimit.*
@@ -62,7 +62,7 @@ fun Route.authUserRoutes(
              * Верификация
              */
             post("/verify-otp") {
-                val request = call.receive<VerifyEmailRequest>()
+                val request = call.receive<VerifyOtpRequest>()
 
                 // Проверка на пустые поля
                 if (request.email.isBlank()) throw EmptyEmailException()
@@ -80,7 +80,7 @@ fun Route.authUserRoutes(
              * Повторная отправка кода верификации
              */
             post("/resend-otp") {
-                val request = call.receive<ResendCodeRequest>()
+                val request = call.receive<ResendOtpRequest>()
 
                 if (request.email.isBlank()) throw EmptyEmailException()
                 if (request.registrationSessionId.isBlank()) throw EmptyVerificationSessionException()
@@ -131,6 +131,21 @@ fun Route.authUserRoutes(
             }
 
             /**
+             * OTP подтверждение
+             */
+            post("/password/verify-otp") {
+                val request = call.receive<VerifyResetOtpRequest>()
+
+                if (request.email.isBlank()) throw EmptyEmailException()
+                if (request.code.isBlank()) throw EmptyOtpCodeException()
+                if (request.resetToken.isBlank()) throw EmptyResetTokenException()
+
+                // Проверяем код и возвращаем подтвержденный resetToken
+                val response = authService.verifyResetOtp(request)
+                call.respond(HttpStatusCode.OK, response)
+            }
+
+            /**
              * Сброс пароля с кодом из почты
              */
             post("/password/reset") {
@@ -138,7 +153,6 @@ fun Route.authUserRoutes(
 
                 // Проверка пустых полей
                 if (request.email.isBlank()) throw EmptyEmailException()
-                if (request.code.isBlank()) throw EmptyOtpCodeException()
                 if (request.resetToken.isBlank()) throw EmptyResetTokenException()
                 if (request.newPassword.isEmpty()) throw EmptyPasswordException()
 
@@ -164,8 +178,8 @@ fun Route.authUserRoutes(
              * Авторизированный пользователь через настройки. Смена пароля
              */
             post("/password/change") {
-                // Принимаем и валидируем тело запроса
-                val request = call.receive<ChangePasswordRequest?>() ?: throw InvalidRequestFormatException()
+                val request = call.receive<ChangePasswordRequest?>()
+                    ?: throw InvalidRequestFormatException()
 
                 if (request.oldPassword.isBlank() || request.newPassword.isBlank()) {
                     throw InvalidRequestFormatException()
@@ -173,15 +187,21 @@ fun Route.authUserRoutes(
 
                 // Извлекаем userId текущего авторизованного пользователя из JWT токена
                 val principal = call.principal<JWTPrincipal>()
-                val userIdStr = principal?.payload?.getClaim("userId")?.asString() ?: throw InvalidTokenException()
+                val userIdStr = principal?.payload?.getClaim("userId")?.asString()
+                    ?: throw InvalidTokenException()
                 val userIdUUID = UUID.fromString(userIdStr)
+
+                // Извлекаем старый accessToken, по которому сейчас открыт WebSocket текущего устройства
+                val currentAccessToken = call.request.headers[HttpHeaders.Authorization]
+                    ?.removePrefix("Bearer ")
+                    ?.trim()
 
                 // Обрабатываем User-Agent
                 val rawUserAgent = call.request.headers[HttpHeaders.UserAgent]
                 val userAgent = parseUserAgentSafely(rawUserAgent)
 
                 // Вызываем сервис бизнес-логики
-                val response = authService.changePassword(userIdUUID, request, userAgent)
+                val response = authService.changePassword(userIdUUID, request, userAgent, currentAccessToken)
 
                 call.respond(HttpStatusCode.OK, response)
             }
@@ -210,7 +230,6 @@ fun Route.authUserRoutes(
              * Выход из аккаунта
              */
             post("/logout") {
-                // Принимаем тело запроса с токеном, который нужно уничтожить
                 val request = call.receive<RefreshRequest?>()
                     ?: throw InvalidRequestFormatException()
 
@@ -218,7 +237,6 @@ fun Route.authUserRoutes(
                     throw InvalidRequestFormatException()
                 }
 
-                // Извлекаем userId из текущего валидного Access-токена
                 val principal = call.principal<JWTPrincipal>()
                 val userIdStr = principal?.payload?.getClaim("userId")?.asString()
                     ?: throw InvalidTokenException()

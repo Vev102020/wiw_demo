@@ -6,6 +6,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import features.auth.routing.authUserRoutes
 import features.auth.routing.authAdminRoutes
+import features.profile.routing.profileRoutes
 import org.koin.ktor.ext.inject
 
 fun Application.configureRouting(
@@ -16,7 +17,7 @@ fun Application.configureRouting(
     routing {
         get("/") {
             call.respondText(
-                text = "WIW Chat Server запущен успешно! 🚀🚀🚀",
+                text = "Сервер успешно запущен!",
                 contentType = io.ktor.http.ContentType.Text.Plain
             )
         }
@@ -25,6 +26,8 @@ fun Application.configureRouting(
             authUserRoutes(authService)
             // Админы
             authAdminRoutes(authService)
+            // Профиль
+            profileRoutes()
         }
     }
 }

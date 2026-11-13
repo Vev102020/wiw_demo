@@ -1,6 +1,6 @@
 package com.wiwchat.shared.features.auth.domain.validator
 
-import com.wiwchat.shared.common.data.errors.AuthErrorCode
+import com.wiwchat.shared.common.domain.errors.AuthErrorCode
 import com.wiwchat.shared.features.auth.domain.constants.AuthConstants
 
 

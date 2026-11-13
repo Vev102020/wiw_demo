@@ -1,81 +1,101 @@
 package com.wiwchat.features.auth.presentation.viewmodel
 
-import com.wiwchat.app.R
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.wiwchat.features.auth.presentation.state.EmailFieldState
-import com.wiwchat.features.auth.presentation.state.PasswordFieldState
-import com.wiwchat.shared.common.data.errors.AuthErrorCode
-import com.wiwchat.shared.common.data.network.AppError
-import com.wiwchat.shared.common.data.network.DomainResult
-import com.wiwchat.shared.features.auth.domain.repository.AuthRepository
+import com.wiwchat.shared.common.domain.errors.AuthErrorCode
+import com.wiwchat.shared.common.domain.model.AppError
+import com.wiwchat.shared.core.forms.FormFieldState
+import com.wiwchat.shared.core.notification.NotificationManager
+import com.wiwchat.shared.features.auth.domain.constants.AuthConstants
+import com.wiwchat.shared.features.auth.domain.usecase.LoginResult
+import com.wiwchat.shared.features.auth.domain.usecase.LoginUseCase
+import com.wiwchat.shared.features.auth.domain.validator.AuthValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor (
-    private val authRepository: AuthRepository
+    private val loginUseCase: LoginUseCase,
+    private val notificationManager: NotificationManager
 ) : ViewModel() {
 
-    val emailInput = EmailFieldState()
-    val passwordInput = PasswordFieldState(isRegistrationMode = false)
+    val emailInput = FormFieldState(
+        scope = viewModelScope,
+        maxLength = AuthConstants.EMAIL_MAX_LENGTH,
+        validator = { text -> AuthValidator.validateEmail(text) }
+    )
 
-    private val _isLoading = mutableStateOf(false)
-    val isLoading: State<Boolean> = _isLoading
+    val passwordInput = FormFieldState(
+        scope = viewModelScope,
+        maxLength = AuthConstants.PASSWORD_MAX_LENGTH,
+        validator = { text ->
+            if (text.isBlank()) AuthErrorCode.AUTH_EMPTY_PASSWORD else null
+        }
+    )
 
-    private val _serverErrorResId = mutableStateOf<Int?>(null)
-    val serverErrorResId: State<Int?> = _serverErrorResId
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    val isButtonEnabled: StateFlow<Boolean> = combine(
+        emailInput.isValid,
+        passwordInput.isValid,
+        _isLoading
+    ) { isEmailValid, isPasswordValid, loading ->
+        isEmailValid && isPasswordValid && !loading
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
 
     fun loginToServer(onNavigateToVerification: (email: String) -> Unit) {
-        // Финальный форсированный чек перед отправкой (собираем булевы статусы)
-        val isEmailValid = emailInput.validate(showEmptyError = true)
-        val isPasswordValid = passwordInput.validate(showEmptyError = true)
-        if (!isEmailValid || !isPasswordValid) return
+        if (!emailInput.validate() || !passwordInput.validate()) return
 
         viewModelScope.launch {
             _isLoading.value = true
-            _serverErrorResId.value = null
 
-            when (val result = authRepository.login(
-                emailInput.text.value,
-                passwordInput.text.value)
-            ) {
-                is DomainResult.Success -> {
-                    val responseBody = result.value
-                    if (!responseBody.needsVerification) {
-                        authRepository.saveSession(responseBody, emailInput.text.value)
-                    } else {
-                        onNavigateToVerification(emailInput.text.value)
-                    }
+            // Используем .value для чтения текущего текста из StateFlow в shared коде
+            when (val result = loginUseCase(emailInput.text.value, passwordInput.text.value)) {
+                is LoginResult.Success -> {
+                    // Ничего делать не нужно: сессия уже сохранена внутри useCase
                 }
-                is DomainResult.Failure -> {
-                    // Мапим общую серверную ошибку (например, неверные учетные данные)
-                    _serverErrorResId.value = when (val error = result.error) {
-                        is AppError.NetworkUnavailable -> R.string.err_network_timeout
-                        is AppError.Timeout -> R.string.err_network_timeout
-                        is AppError.ServerMaintenance -> R.string.err_server_maintenance
-                        is AppError.Unknown -> R.string.err_generic_unknown
-                        is AppError.Backend -> {
-                            when (error.code) {
-                                AuthErrorCode.AUTH_INVALID_CREDENTIALS -> R.string.err_auth_invalid_credentials
-                                else -> R.string.err_generic_unknown
-                            }
-                        }
-                    }
+                is LoginResult.NeedsVerification -> {
+                    onNavigateToVerification(result.email)
+                }
+                is LoginResult.Error -> {
+                    handleFailure(result.error)
                 }
             }
             _isLoading.value = false
         }
     }
 
-    val isButtonEnabled: Boolean
-        get() = emailInput.text.value.isNotBlank() &&
-                passwordInput.text.value.isNotBlank() &&
-                emailInput.errorResId.value == null &&
-                passwordInput.errorResId.value == null &&
-                !_isLoading.value
+
+    private fun handleFailure(error: AppError) {
+        if (error is AppError.Backend) {
+            val authCode = error.code as? AuthErrorCode
+            if (authCode != null) {
+                handleBackendError(authCode, error)
+            } else {
+                notificationManager.showNotification(error)
+            }
+        } else {
+            notificationManager.showNotification(error)
+        }
+    }
+
+    private fun handleBackendError(code: AuthErrorCode, originalError: AppError.Backend) {
+        when (code) {
+            AuthErrorCode.AUTH_INVALID_CREDENTIALS -> {
+                emailInput.setErrorFromBackend(code)
+                passwordInput.setErrorFromBackend(code)
+            } else -> {
+                notificationManager.showNotification(originalError)
+            }
+        }
+    }
+
 
 }

@@ -9,13 +9,11 @@ import androidx.compose.ui.unit.sp
 import com.wiwchat.app.R
 
 private val fontFamily = FontFamily(
-    Font(R.font.ibm_plex_sans_thin, FontWeight.Thin),
-    Font(R.font.ibm_plex_sans_extra_light, FontWeight.ExtraLight),
-    Font(R.font.ibm_plex_sans_light, FontWeight.Light),
-    Font(R.font.ibm_plex_sans_regular, FontWeight.Normal),
-    Font(R.font.ibm_plex_sans_medium, FontWeight.Medium),
-    Font(R.font.ibm_plex_sans_bold, FontWeight.Bold),
-    Font(R.font.ibm_plex_sans_semi_bold, FontWeight.SemiBold),
+    Font(R.font.golos_text_regular, FontWeight.Normal),
+    Font(R.font.golos_text_medium, FontWeight.Medium),
+    Font(R.font.golos_text_bold, FontWeight.Bold),
+    Font(R.font.golos_text_semi_bold, FontWeight.SemiBold),
+    Font(R.font.golos_text_black, FontWeight.Black),
 )
 
 val AppTypography = Typography(

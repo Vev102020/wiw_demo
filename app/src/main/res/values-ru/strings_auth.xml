@@ -8,6 +8,7 @@
     <!-- Auth Screen -->
     <string name="auth_name_label">Имя</string>
     <string name="auth_email_label">Email</string>
+    <string name="auth_old_password_label">Текущий пароль</string>
     <string name="auth_password_label">Пароль</string>
     <string name="auth_password_label_repeat">Повтор пароля</string>
     <string name="auth_forgot_pass_btn">Забыли пароль?</string>
@@ -25,7 +26,7 @@
     <!-- Verifcation  -->
     <string name="auth_verify_title">Подтвердите почту</string>
     <string name="auth_verify_subtitle">Введите верификационный код, отправленный на почту</string>
-    <string name="auth_verify_expiry">Не пришел код? Повторная отправка через <b>%1$s</b> сек</string>
+    <string name="auth_verify_expiry">Повторная отправка через <b>%1$s</b> сек</string>
     <string name="auth_verify_resend_btn">Отправить код повторно</string>
     <string name="auth_verify_continue_btn">Продолжить</string>
     <string name="auth_code_label">Код подтверждения</string>
@@ -37,7 +38,10 @@
     <string name="auth_forgot_link_login">Войти</string>
     <!-- Reset password -->
     <string name="auth_reset_title">Новый пароль</string>
-    <string name="auth_reset_description">Код подтверждения отправлен на указанный email. Придумайте сложный пароль для защиты аккаунта.</string>
+    <string name="auth_reset_description">Придумайте сложный пароль для защиты аккаунта.</string>
     <string name="auth_new_password_label">Придумайте новый пароль</string>
     <string name="auth_reset_btn">Сбросить пароль</string>
+    <!-- Change password -->
+    <string name="auth_change_title">Изменение пароля</string>
+    <string name="auth_change_save_btn">Сохранить</string>
 </resources>

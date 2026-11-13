@@ -9,6 +9,7 @@
     <!-- Auth Screen -->
     <string name="auth_name_label">Name</string>
     <string name="auth_email_label">Email</string>
+    <string name="auth_old_password_label">Current password</string>
     <string name="auth_password_label">Password</string>
     <string name="auth_password_label_repeat">Repeat password</string>
     <string name="auth_forgot_pass_btn">Forgot password?</string>
@@ -26,7 +27,7 @@
     <!-- Verification -->
     <string name="auth_verify_title">Confirm your email</string>
     <string name="auth_verify_subtitle">Please enter the verification code sent to</string>
-    <string name="auth_verify_expiry">Didn’t get the code? Resend in <b>%1$s</b> sec</string>
+    <string name="auth_verify_expiry">Resend in <b>%1$s</b> sec</string>
     <string name="auth_verify_resend_btn">Resend code</string>
     <string name="auth_verify_continue_btn">Continue</string>
     <string name="auth_code_label">Verification code</string>
@@ -38,7 +39,10 @@
     <string name="auth_forgot_link_login">Log In</string>
     <!-- Reset password -->
     <string name="auth_reset_title">New Password</string>
-    <string name="auth_reset_description">A verification code has been sent to the specified email. Create a strong password to protect your account.</string>
+    <string name="auth_reset_description">Create a strong password to protect your account.</string>
     <string name="auth_new_password_label">Create a new password</string>
     <string name="auth_reset_btn">Reset Password</string>
+    <!-- Change password -->
+    <string name="auth_change_title">Change password</string>
+    <string name="auth_change_save_btn">Save</string>
 </resources>

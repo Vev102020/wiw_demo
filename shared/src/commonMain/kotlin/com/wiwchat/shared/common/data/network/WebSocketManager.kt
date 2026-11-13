@@ -13,7 +13,8 @@ import kotlin.time.Duration.Companion.milliseconds
 class WebSocketManager(
     private val client: HttpClient,
     private val tokenProvider: TokenProvider,
-    private val serverUrl: String
+    private val serverUrl: String,
+    private val serverPort: Int
 ) {
     private var webSocketJob: Job? = null
     private val scope = CoroutineScope(SupervisorJob())
@@ -23,11 +24,13 @@ class WebSocketManager(
         if (webSocketJob?.isActive == true) return
 
         webSocketJob = scope.launch {
-            while (isActive) { // Бесконечный цикл для автоматического переподключения при обрыве сети
+            // Бесконечный цикл для автоматического переподключения при обрыве сети
+            while (isActive) {
                 try {
 
                     client.webSocket(
                         host = serverUrl,
+                        port = serverPort,
                         path = "/ws/session"
                     ) {
                         for (frame in incoming) {
@@ -38,10 +41,15 @@ class WebSocketManager(
                                     // Пробуем распарсить системное сообщение из общей shared-модели
                                     val systemMessage = Json.decodeFromString<WebSocketSystemDto>(text)
 
-                                    if (systemMessage.action == WebSocketSystemAction.FORCE_LOGOUT) {
+                                    // Обрабатываем и принудительный выход, и блокировку аккаунта
+                                    if (systemMessage.action == WebSocketSystemAction.FORCE_LOGOUT ||
+                                        systemMessage.action == WebSocketSystemAction.ACCOUNT_SUSPENDED
+                                    ) {
                                         tokenProvider.clearTokens()
                                         this.close()
-                                        break
+                                        // Останавливаем корутину полностью, чтобы не было бесконечных реконнектов
+                                        this@launch.cancel()
+                                        return@webSocket
                                     }
                                 } catch (e: Exception) {
                                     // Если пришел не JSON, а обычный текст (например, сообщение чата) — обрабатываем иначе
@@ -50,12 +58,20 @@ class WebSocketManager(
                             }
                         }
                     }
+                } catch (e: CancellationException) {
+                    // Обязательно пробрасываем отмену корутины
+                    throw e
                 } catch (e: Exception) {
                     // В случае падения сети ждем 5 секунд перед следующей попыткой
                     delay(5000.milliseconds)
                 }
             }
         }
+    }
+
+    fun reconnect(userId: String) {
+        disconnect()
+        connect(userId)
     }
 
     fun disconnect() {

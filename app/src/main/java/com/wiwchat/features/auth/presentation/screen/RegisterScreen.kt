@@ -13,16 +13,16 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wiwchat.app.R
-import com.wiwchat.core.ui.components.AuthNavLink
-import com.wiwchat.core.ui.components.PolicyCheckbox
-import com.wiwchat.core.ui.components.PrimaryButton
+import com.wiwchat.core.ui.components.auth.AuthNavLink
+import com.wiwchat.core.ui.components.base.InputField
+import com.wiwchat.core.ui.components.base.PolicyCheckbox
+import com.wiwchat.core.ui.components.base.PrimaryButton
 import com.wiwchat.core.ui.theme.AppTheme
 import com.wiwchat.core.ui.theme.appColors
 import com.wiwchat.core.ui.theme.spacing
-import com.wiwchat.features.auth.presentation.components.ValidatedInputField
-import com.wiwchat.features.auth.presentation.state.EmailFieldState
-import com.wiwchat.features.auth.presentation.state.PasswordFieldState
+import com.wiwchat.core.ui.util.mapAuthErrorToId
 import com.wiwchat.features.auth.presentation.viewmodel.RegisterViewModel
 
 @Composable
@@ -35,37 +35,62 @@ fun RegisterRoute(
 
     BackHandler(enabled = true) { onNavigateBack() }
 
+    val emailText by viewModel.emailInput.text.collectAsStateWithLifecycle()
+    val emailErrorCode by viewModel.emailInput.error.collectAsStateWithLifecycle()
+
+    val passwordText by viewModel.passwordInput.text.collectAsStateWithLifecycle()
+    val passwordErrorCode by viewModel.passwordInput.error.collectAsStateWithLifecycle()
+
+    val passwordRepeatText by viewModel.passwordRepeatInput.text.collectAsStateWithLifecycle()
+    val passwordRepeatErrorCode by viewModel.passwordRepeatInput.error.collectAsStateWithLifecycle()
+
+    // Разворачиваем общие состояния экрана
+    val isButtonEnabled by viewModel.isButtonEnabled.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val isPolicyChecked by viewModel.isPolicyChecked.collectAsStateWithLifecycle()
+
     RegisterScreen(
-        emailValue = viewModel.emailInput,
-        passwordValue = viewModel.passwordInput,
-        passwordRepeatValue = viewModel.passwordRepeatInput,
-        onPasswordRepeatFocusChanged = { viewModel.onPasswordRepeatFocusChanged(it) },
-
-        isButtonEnabled = viewModel.isButtonEnabled,
-        isLoading = viewModel.isLoading.value,
-        errorResId = viewModel.serverErrorResId.value,
-
-        isPolicyChecked = viewModel.isPolicyChecked.value,
+        emailText = emailText,
+        emailError = emailErrorCode?.let { mapAuthErrorToId(it) },
+        passwordText = passwordText,
+        passwordError = passwordErrorCode?.let { mapAuthErrorToId(it) },
+        passwordRepeatText = passwordRepeatText,
+        passwordRepeatError = passwordRepeatErrorCode?.let { mapAuthErrorToId(it) },
+        isButtonEnabled = isButtonEnabled,
+        isLoading = isLoading,
+        isPolicyChecked = isPolicyChecked,
+        onEmailChanged = { viewModel.emailInput.onTextChanged(it) },
+        onEmailFocusChanged = { viewModel.emailInput.onFocusChanged(it) },
+        onPasswordChanged = { viewModel.passwordInput.onTextChanged(it) },
+        onPasswordFocusChanged = { viewModel.passwordInput.onFocusChanged(it) },
+        onPasswordRepeatChanged = { viewModel.passwordRepeatInput.onTextChanged(it) },
+        onPasswordRepeatFocusChanged = { viewModel.passwordRepeatInput.onFocusChanged(it) },
         onPolicyCheckedChange = { viewModel.onPolicyCheckedChange(it) },
-
         onRegisterClick = { viewModel.registerToServer(onNavigateToVerification) },
-        onNavigateToLogin = onNavigateToLogin,
+        onNavigateToLogin = onNavigateToLogin
     )
 }
 
 @Composable
 fun RegisterScreen (
-    emailValue: EmailFieldState,
-    passwordValue: PasswordFieldState,
-    passwordRepeatValue: PasswordFieldState,
-    onPasswordRepeatFocusChanged: (Boolean) -> Unit,
+    emailText: String,
+    emailError: Int?,
+    passwordText: String,
+    passwordError: Int?,
+    passwordRepeatText: String,
+    passwordRepeatError: Int?,
     isButtonEnabled: Boolean,
     isLoading: Boolean,
-    errorResId: Int?,
     isPolicyChecked: Boolean,
+    onEmailChanged: (String) -> Unit,
+    onEmailFocusChanged: (Boolean) -> Unit,
+    onPasswordChanged: (String) -> Unit,
+    onPasswordFocusChanged: (Boolean) -> Unit,
+    onPasswordRepeatChanged: (String) -> Unit,
+    onPasswordRepeatFocusChanged: (Boolean) -> Unit,
     onPolicyCheckedChange: (Boolean) -> Unit,
     onRegisterClick: () -> Unit,
-    onNavigateToLogin: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ){
 
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -92,50 +117,79 @@ fun RegisterScreen (
                     fontSize = 22.sp
                 ),
             )
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.extraLarge))
+
+            // email
+            InputField(
+                value = emailText,
+                onValueChange = onEmailChanged,
+                label = stringResource(R.string.auth_email_label),
+                isError = emailError != null,
+                errorMessage = emailError?.let { stringResource(id = it) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Next
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { onEmailFocusChanged(it.isFocused) }
+            )
+
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
-            ValidatedInputField(
-                fieldState = emailValue,
-                label = stringResource(R.string.auth_email_label)
-            )
-
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
-
-            ValidatedInputField(
-                fieldState = passwordValue,
+            // пароль
+            InputField(
+                value = passwordText,
+                onValueChange = onPasswordChanged,
                 label = stringResource(R.string.auth_password_label),
+                isError = passwordError != null,
+                errorMessage = passwordError?.let { stringResource(id = it) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next
+                ),
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    val iconRes = if (isPasswordVisible) R.drawable.ic_eye_open else R.drawable.ic_eye_closed
                     IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                         Icon(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = stringResource(R.string.auth_show_hide_pass_btn),
-                            tint = MaterialTheme.colorScheme.outline
+                            painter = painterResource(
+                                id = if (isPasswordVisible) R.drawable.ic_eye_open else R.drawable.ic_eye_closed
+                            ),
+                            contentDescription = null
                         )
                     }
-                }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { onPasswordFocusChanged(it.isFocused) }
             )
 
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.large))
 
-            ValidatedInputField(
-                fieldState = passwordRepeatValue,
+            InputField(
+                value = passwordRepeatText,
+                onValueChange = onPasswordRepeatChanged,
                 label = stringResource(R.string.auth_password_label_repeat),
-                modifier = Modifier.onFocusChanged { onPasswordRepeatFocusChanged(it.isFocused) },
+                isError = passwordRepeatError != null,
+                errorMessage = passwordRepeatError?.let { stringResource(id = it) },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
                 visualTransformation = if (isPasswordRepeatVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    val iconRes = if (isPasswordRepeatVisible) R.drawable.ic_eye_open else R.drawable.ic_eye_closed
                     IconButton(onClick = { isPasswordRepeatVisible = !isPasswordRepeatVisible }) {
                         Icon(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = stringResource(R.string.auth_show_hide_pass_btn),
-                            tint = MaterialTheme.colorScheme.outline
+                            painter = painterResource(
+                                id = if (isPasswordRepeatVisible) R.drawable.ic_eye_open else R.drawable.ic_eye_closed
+                            ),
+                            contentDescription = null
                         )
                     }
-                }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { onPasswordRepeatFocusChanged(it.isFocused) }
             )
 
             Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
@@ -154,19 +208,6 @@ fun RegisterScreen (
                 enabled = isButtonEnabled
             )
 
-            errorResId?.let {
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-                Text(
-                    text = stringResource(it),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = MaterialTheme.spacing.small),
-                    textAlign = TextAlign.Center
-                )
-            }
-
             Spacer(modifier = Modifier.weight(1f))
 
             AuthNavLink(
@@ -184,26 +225,27 @@ fun RegisterScreen (
 @Preview(showBackground = true, locale="en")
 @Composable
 private fun RegisterScreenPreview(){
-    val previewEmailState = EmailFieldState().apply {
-        onTextChanged("username@mail.com")
-    }
-    val previewPasswordState = PasswordFieldState(isRegistrationMode = true).apply {
-        onTextChanged("password123")
-    }
-    val previewPasswordRepeatState = PasswordFieldState(isRegistrationMode = false).apply {
-        onTextChanged("password123")
-    }
+    var previewEmailState by remember { mutableStateOf("username@mail.com") }
+    var previewPasswordState by remember { mutableStateOf("password123") }
+    var previewPasswordRepeatState by remember { mutableStateOf("password123") }
 
     AppTheme {
         RegisterScreen(
-            emailValue = previewEmailState,
-            passwordValue = previewPasswordState,
-            passwordRepeatValue = previewPasswordRepeatState,
-            onPasswordRepeatFocusChanged = {},
+            emailText = previewEmailState,
+            emailError = null,
+            passwordText = previewPasswordState,
+            passwordError = null,
+            passwordRepeatText = previewPasswordRepeatState,
+            passwordRepeatError = null,
             isButtonEnabled = true,
             isLoading = false,
-            errorResId = null,
             isPolicyChecked = true,
+            onEmailChanged = {},
+            onEmailFocusChanged = {},
+            onPasswordChanged = {},
+            onPasswordFocusChanged = {},
+            onPasswordRepeatChanged = {},
+            onPasswordRepeatFocusChanged = {},
             onPolicyCheckedChange = {},
             onRegisterClick = {},
             onNavigateToLogin = {}

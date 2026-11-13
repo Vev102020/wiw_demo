@@ -1,6 +1,6 @@
 package core.errors
 
-import com.wiwchat.shared.common.data.errors.MediaErrorCode
+import com.wiwchat.shared.common.domain.errors.MediaErrorCode
 import io.ktor.http.HttpStatusCode
 
 sealed class MediaException(

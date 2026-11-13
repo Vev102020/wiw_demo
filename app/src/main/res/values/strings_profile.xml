@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_setup_title">Almost there</string>
+    <string name="profile_setup_subtitle">Complete your profile details to finish registration</string>
+    <string name="profile_display_name_label">Name</string>
+    <string name="profile_username_label">Username</string>
+    <string name="profile_setup_continue_btn">Continue</string>
+</resources>

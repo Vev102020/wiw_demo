@@ -1,118 +1,117 @@
 package com.wiwchat.features.auth.presentation.viewmodel
 
-import com.wiwchat.app.R
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.wiwchat.features.auth.navigation.AuthDestinations
-import com.wiwchat.shared.common.data.errors.AuthErrorCode
-import com.wiwchat.shared.common.data.network.AppError
-import com.wiwchat.shared.common.data.network.DomainResult
-import com.wiwchat.shared.features.auth.domain.repository.AuthRepository
+import com.wiwchat.shared.common.domain.errors.AuthErrorCode
+import com.wiwchat.shared.common.domain.model.AppError
+import com.wiwchat.shared.core.notification.NotificationManager
+import com.wiwchat.shared.features.auth.data.dto.enums.VerificationType
 import com.wiwchat.shared.features.auth.domain.constants.AuthConstants
+import com.wiwchat.shared.features.auth.domain.usecase.ResendOtpResult
+import com.wiwchat.shared.features.auth.domain.usecase.ResendOtpUseCase
+import com.wiwchat.shared.features.auth.domain.usecase.VerifyOtpResult
+import com.wiwchat.shared.features.auth.domain.usecase.VerifyOtpUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class VerificationViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
+    private val verifyOtpUseCase: VerifyOtpUseCase,
+    private val resendOtpUseCase: ResendOtpUseCase,
+    private val notificationManager: NotificationManager,
     savedStateHandle: SavedStateHandle
 ): ViewModel() {
     private val args = savedStateHandle.toRoute<AuthDestinations.Verification>()
 
     val email: String = args.email
+    private val verifyType: VerificationType = args.verifyType
+    private val _sessionToken = MutableStateFlow(args.token ?: "")
 
-    private val _registrationSessionId = mutableStateOf(args.token ?: "")
+    private val _otpCodeInput = MutableStateFlow("")
+    val otpCodeInput: StateFlow<String> = _otpCodeInput.asStateFlow()
 
-    private val _otpCodeInput = mutableStateOf("")
-    val otpCodeInput: State<String> = _otpCodeInput
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isLoading = mutableStateOf(false)
-    val isLoading: State<Boolean> = _isLoading
-
-    private val _errorStringResId = mutableStateOf<Int?>(null)
-    val errorStringResId: State<Int?> = _errorStringResId
-
-    private val _secondsRemaining = mutableIntStateOf(AuthConstants.INITIAL_TIMER_SECONDS)
-    val secondsRemaining: State<Int> = _secondsRemaining
+    private val _secondsRemaining = MutableStateFlow(AuthConstants.INITIAL_TIMER_SECONDS)
+    val secondsRemaining: StateFlow<Int> = _secondsRemaining.asStateFlow()
 
     private var timerJob: Job? = null
 
+    private val _otpError = MutableStateFlow<AuthErrorCode?>(null)
+    val otpError: StateFlow<AuthErrorCode?> = _otpError.asStateFlow()
+
+    val isButtonEnabled: StateFlow<Boolean> = combine(
+        _otpCodeInput,
+        _isLoading
+    ) { code, loading ->
+        code.length == AuthConstants.CODE_LENGTH && !loading
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
     init {
-        startTimer()
+        // Если пришли со страницы логина (токен пустой), разрешаем сразу запросить новый код
+        if (verifyType == VerificationType.REGISTRATION && _sessionToken.value.isBlank()) {
+            _secondsRemaining.value = 0
+        } else {
+            startTimer()
+        }
     }
 
     fun onOtpCodeChanged(updatedCode: String) {
-        // Ограничиваем ввод: только цифры и не длиннее 6 символов
         if (updatedCode.length <= AuthConstants.CODE_LENGTH && updatedCode.all { it.isDigit() }) {
             _otpCodeInput.value = updatedCode
-            if (_errorStringResId.value != null) _errorStringResId.value = null
+            _otpError.value = null
         }
     }
 
-    fun startTimer() {
+    fun startTimer(){
         timerJob?.cancel()
-        _secondsRemaining.intValue = AuthConstants.INITIAL_TIMER_SECONDS
+        _secondsRemaining.value = AuthConstants.INITIAL_TIMER_SECONDS
 
         timerJob = viewModelScope.launch {
-            while (_secondsRemaining.intValue > 0) {
+            while (_secondsRemaining.value > 0){
                 delay(1000L.milliseconds)
-                _secondsRemaining.intValue -= 1
+                _secondsRemaining.value -= 1
             }
-        }
-    }
-
-    fun clearError() {
-        if (_errorStringResId.value != null) {
-            _errorStringResId.value = null
         }
     }
 
     // Метод отправки кода на сервер
-    fun verifyCodeToServer() {
-        if (_otpCodeInput.value.length < 6) {
-            _errorStringResId.value = R.string.err_auth_invalid_code
-            return
-        }
+    fun verifyOtpToServer(
+        onNavigateToResetPassword: (email: String, verifiedResetToken: String) -> Unit
+    ) {
+        if (_otpCodeInput.value.length != AuthConstants.CODE_LENGTH) return
 
         viewModelScope.launch {
             _isLoading.value = true
-            _errorStringResId.value = null
 
-            when (val result = authRepository.verifyEmail(
+            when (val result = verifyOtpUseCase(
                 email = email,
                 code = _otpCodeInput.value,
-                registrationSessionId = _registrationSessionId.value
+                sessionToken = _sessionToken.value,
+                verifyType = verifyType
             )){
-                is DomainResult.Success -> {
-                    val responseBody = result.value
-                    authRepository.saveSession(responseBody, email)
+                is VerifyOtpResult.RegistrationSuccess -> {
+                    timerJob?.cancel()
                 }
-                is DomainResult.Failure -> {
-                    _errorStringResId.value = when (val error = result.error){
-                        is AppError.NetworkUnavailable -> R.string.err_network_timeout
-                        is AppError.Timeout -> R.string.err_network_timeout
-                        is AppError.ServerMaintenance -> R.string.err_server_maintenance
-                        is AppError.Unknown -> R.string.err_generic_unknown
-                        is AppError.Backend -> {
-                            when (error.code){
-                                AuthErrorCode.OTP_INVALID_CODE -> R.string.err_auth_invalid_code
-                                // токены
-                                AuthErrorCode.OTP_EXPIRED_TOKEN,
-                                AuthErrorCode.OTP_INVALID_TOKEN,
-                                AuthErrorCode.OTP_EMPTY_TOKEN -> R.string.err_auth_code_expired
-                                else -> R.string.err_generic_unknown
-                            }
-                        }
-                    }
+                is VerifyOtpResult.ResetCodeVerified -> {
+                    timerJob?.cancel()
+                    onNavigateToResetPassword(email, result.verifiedResetToken)
+                }
+                is VerifyOtpResult.Error -> {
+                    handleFailure(result.error)
                 }
             }
 
@@ -121,42 +120,60 @@ class VerificationViewModel @Inject constructor(
 
     }
 
-    fun resendCodeToServer() {
-        // Безопасность: не даем сделать повторный запрос, пока идет загрузка или таймер еще не дошел до 0
-        if (_isLoading.value || _secondsRemaining.intValue > 0) return
+    fun resendOtpToServer() {
+        // Не даем сделать повторный запрос
+        if (
+            _isLoading.value ||
+            _secondsRemaining.value > 0
+        ) return
 
         viewModelScope.launch {
             _isLoading.value = true
-            _errorStringResId.value = null
 
-            when (val result = authRepository.resendCode(
+            when (val result = resendOtpUseCase(
                 email = email,
-                registrationSessionId = _registrationSessionId.value
+                currentSessionToken = _sessionToken.value,
+                verifyType = verifyType
             )) {
-                is DomainResult.Success -> {
-                    // Обновляем наш токен, так как сервер сгенерировал новый JWT с новым OTP внутри
-                    _registrationSessionId.value = result.value.registrationSessionId
-                    _otpCodeInput.value = "" // Очищаем старый ввод пользователя
-
-                    // Перезапускаем таймер заново на 120 секунд
+                is ResendOtpResult.Success -> {
+                    _sessionToken.value = result.newSessionToken
+                    _otpCodeInput.value = ""
+                    _otpError.value = null
                     startTimer()
                 }
-                is DomainResult.Failure -> {
-                    _errorStringResId.value = when (val error = result.error) {
-                        is AppError.NetworkUnavailable -> R.string.err_network_timeout
-                        is AppError.Timeout -> R.string.err_network_timeout
-                        is AppError.ServerMaintenance -> R.string.err_server_maintenance
-                        is AppError.Unknown -> R.string.err_generic_unknown
-                        is AppError.Backend -> {
-                            when (error.code) {
-                                AuthErrorCode.OTP_INVALID_TOKEN -> R.string.err_auth_code_expired
-                                else -> R.string.err_generic_unknown
-                            }
-                        }
-                    }
+                is ResendOtpResult.Error -> {
+                    handleFailure(result.error)
                 }
             }
+
             _isLoading.value = false
+        }
+    }
+
+    private fun handleFailure(error: AppError) {
+        if (error is AppError.Backend) {
+            val authCode = error.code as? AuthErrorCode
+            if (authCode != null) {
+                handleBackendError(authCode, error)
+            } else {
+                notificationManager.showNotification(error)
+            }
+        } else {
+            notificationManager.showNotification(error)
+        }
+    }
+
+    private fun handleBackendError(code: AuthErrorCode, originalError: AppError.Backend) {
+        when (code) {
+            // Неверный код
+            AuthErrorCode.RESET_INVALID_CODE,
+            AuthErrorCode.OTP_INVALID_CODE -> {
+                _otpError.value = code
+            }
+
+            else -> {
+                notificationManager.showNotification(originalError)
+            }
         }
     }
 

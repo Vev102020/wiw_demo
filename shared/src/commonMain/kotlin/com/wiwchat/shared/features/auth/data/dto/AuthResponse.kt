@@ -1,16 +1,8 @@
 package com.wiwchat.shared.features.auth.data.dto
 
+import com.wiwchat.shared.features.auth.data.dto.enums.OperationStatus
 import com.wiwchat.shared.features.profile.data.dto.UserProfileDto
 import kotlinx.serialization.Serializable
-
-@Serializable
-data class AuthResponse(
-    val accessToken: String,
-    val refreshToken: String,
-    val expiresIn: Long,
-    val tokenType: String = "Bearer",
-    val userId: String
-)
 
 @Serializable
 data class LoginResponse(
@@ -24,10 +16,8 @@ data class LoginResponse(
 )
 
 @Serializable
-data class RefreshResponse(
-    val accessToken: String,
-    val refreshToken: String,
-    val expiresIn: Long
+data class ForgotPasswordResponse(
+    val resetToken: String
 )
 
 @Serializable
@@ -38,7 +28,7 @@ data class RegisterResponse(
 
 @Serializable
 data class StatusResponse(
-    val status: String = "success",
+    val status: OperationStatus = OperationStatus.SUCCESS,
     val message: String? = null
 )
 

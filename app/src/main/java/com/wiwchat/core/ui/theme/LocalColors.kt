@@ -3,6 +3,7 @@ package com.wiwchat.core.ui.theme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
+import kotlin.collections.copy
 
 //Semantic Tokens
 @Immutable
@@ -20,6 +21,7 @@ data class AppColors(
     //bg
     val backgroundPrimary: Color,   
     val backgroundSecondary: Color,
+    val shadow: Color,
     //buttons
     val buttonContainerPrimary: Color,
     val buttonContentPrimary: Color,
@@ -71,14 +73,15 @@ val LightAppColors = AppColors(
     circle2 = Blue100,
     //disabled
     disabledContainer = Gray100,
-    disabledContent = Gray300,
+    disabledContent = Gray400,
     //error
     errorTextDefault = Red500,
-    errorContainer = Red500,
+    errorContainer = White100,
     errorContent = Red500,
     //bg
     backgroundPrimary = White100,
-    backgroundSecondary = Gray10,
+    backgroundSecondary = Gray300,
+    shadow = Black700,
     //buttons
     buttonContainerPrimary = Blue300,
     buttonContentPrimary = White100,
@@ -102,7 +105,7 @@ val LightAppColors = AppColors(
     // text
     textDefault = Black700,
     textPrimary = Blue300,
-    textSecondary = Gray300,
+    textSecondary = Gray400,
     textInvert = White100,
     // link
     linkDefault = Blue300,
@@ -128,7 +131,7 @@ val DarkAppColors = AppColors(
     circle2 = Blue100,
     //disabled
     disabledContainer = Gray100,
-    disabledContent = Gray300,
+    disabledContent = Gray400,
     //error
     errorTextDefault = Red500,
     errorContainer = Red500,
@@ -136,6 +139,7 @@ val DarkAppColors = AppColors(
     //bg
     backgroundPrimary = White100,
     backgroundSecondary = Gray10,
+    shadow = Black700,
     //buttons
     buttonContainerPrimary = Blue300,
     buttonContentPrimary = White100,
@@ -159,7 +163,7 @@ val DarkAppColors = AppColors(
     // text
     textDefault = Black700,
     textPrimary = Blue300,
-    textSecondary = Gray300,
+    textSecondary = Gray400,
     textInvert = White100,
     // link
     linkDefault = Blue300,
